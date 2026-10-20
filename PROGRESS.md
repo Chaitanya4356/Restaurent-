@@ -1,0 +1,49 @@
+# Project Progress: Josh Online Food Ordering Platform
+
+## Project Overview
+- **Restaurant Name:** Josh
+- **Cuisine:** South Indian Vegetarian & Non-Vegetarian
+- **Location & Time Zone:** Vizag, India (`Asia/Kolkata`)
+- **Currency:** INR (₹), all monetary values stored as integers in **paise** (1 INR = 100 paise)
+- **Order Types:** Pickup and Delivery (within 20 km radius)
+- **Delivery Fee:** ₹40 (free for orders above ₹500)
+- **Minimum Order for Delivery:** ₹100
+- **Operating Hours:** 07:00 AM to 11:00 PM (orders cut off at 10:40 PM, 20 mins prior to close)
+- **Initial Payment Methods:** Pay on Delivery / Pickup (Cash or UPI QR upon arrival); Razorpay online payments in Phase 7
+- **Tech Stack:** Next.js (App Router, TS strict mode), Tailwind CSS, shadcn/ui, Supabase (Postgres, Auth, Storage, Realtime), Zod + React Hook Form, Resend, Vitest, Playwright.
+
+---
+
+## Phases Status
+- [x] **Pre-flight Q&A:** Completed
+- [ ] **Phase 1 – Plan:** In Progress
+  - Order flow & state transitions defined
+  - Database schema & RLS security model drafted
+  - Wireframes created for Home, Menu, Cart, Checkout, Confirmation, Staff Dashboard
+- [ ] **Phase 2 – Setup:** Not Started
+- [ ] **Phase 3 – Database & RLS:** Not Started
+- [ ] **Phase 4 – Menu Pages & Browsing:** Not Started
+- [ ] **Phase 5 – Cart, Server-side Pricing & Checkout:** Not Started
+- [ ] **Phase 6 – Owner Live Dashboard & Menu Manager:** Not Started
+- [ ] **Phase 7 – Email Notifications & Payment:** Not Started
+- [ ] **Phase 8 – Polish, SEO & Accessibility:** Not Started
+- [ ] **Phase 9 – Testing (Unit, E2E, Axe, RLS, CI):** Not Started
+- [ ] **Phase 10 – Production Deployment & Launch:** Not Started
+- [ ] **Phase 11 – Handover & Documentation:** Not Started
+
+---
+
+## Key Decisions
+1. **Host:** Vercel for serverless edge deployment with Next.js App Router.
+2. **Pricing Integrity:** Server computes all subtotals, delivery fees, and grand totals directly against Supabase database items. Browser never dictates prices.
+3. **Database Security:** Strict Postgres Row Level Security (RLS). Anonymous users can only read active categories, available menu items, and public store settings. Orders can only be inserted by server actions via service role / authenticated backend logic, and only authenticated staff can read/update orders.
+4. **Money Units:** Integer paise representation (e.g., ₹100.00 = `10000` paise).
+5. **Brand Customization:** Dynamic theme tokens (primary brand color, logo) stored in `settings` table so the owner can configure brand identity anytime without redeploying.
+
+---
+
+## Open TODO Placeholders
+- [ ] **TODO: Real Address:** Currently using placeholder: *Josh Restaurant, Siripuram Beach Road, Visakhapatnam, AP 530003*
+- [ ] **TODO: Real Contact Number:** Currently using placeholder: *+91 98765 43210*
+- [ ] **TODO: Logo File:** Owner to provide final SVG/PNG logo during Phase 3/4 (or upload via dashboard).
+- [ ] **TODO: Menu Catalog Details:** Full dish list with exact prices and descriptions to be populated in Phase 3 seed file.
