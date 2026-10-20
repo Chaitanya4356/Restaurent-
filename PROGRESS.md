@@ -38,12 +38,19 @@
   - Accessible slide-out Cart Drawer with item notes and free delivery meter
   - High-impact Home page with popular dishes preview and delivery perks
   - Live Menu page with category grouping, instant search, Veg/Non-Veg toggles, and sold-out states
-- [/] **Phase 5 – Cart, Server-side Pricing & Checkout:** In Progress
-  - Persistent cart state in local storage
-  - Checkout form with Zod schema (pickup vs 20km delivery, preferred time, cash/UPI payment)
-  - Strict server action pricing recalculation from Supabase (never trusts browser total)
-  - Order confirmation receipt & live order tracker
-- [ ] **Phase 6 – Owner Live Dashboard & Menu Manager:** Not Started
+- [x] **Phase 5 – Cart, Server-side Pricing & Checkout:** Completed
+  - Persistent cart state in local storage surviving refresh
+  - Validated checkout form with Zod schema (pickup vs 20km delivery, preferred time, cash/UPI payment)
+  - Strict server action pricing recalculation from Supabase database (never trusts browser prices)
+  - Historical snapshot of dishes and prices in `order_items`
+  - Live order confirmation page with real-time status tracker and receipt
+  - Fast order lookup page at `/track`
+- [/] **Phase 6 – Owner Live Dashboard & Menu Manager:** In Progress
+  - Staff authentication login (`/admin/login`) with Supabase Auth
+  - Real-time kitchen orders dashboard with audio chime notification on new orders
+  - Order status changer: New ➔ Preparing ➔ Ready ➔ Completed (or Cancelled)
+  - Menu Manager (add/edit items, price changes, sold-out switch, photo upload)
+  - Settings manager (operating hours, emergency accepting orders switch, delivery fee)
 - [ ] **Phase 7 – Email Notifications & Payment:** Not Started
 - [ ] **Phase 8 – Polish, SEO & Accessibility:** Not Started
 - [ ] **Phase 9 – Testing (Unit, E2E, Axe, RLS, CI):** Not Started
