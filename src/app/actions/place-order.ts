@@ -3,6 +3,8 @@
 import { checkoutFormSchema, type CheckoutFormData } from '@/lib/validation/checkout';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { calculateStoreStatus } from '@/lib/opening-hours';
+import { sendOwnerOrderNotificationEmail } from '@/lib/email/order-notification';
+import type { Order } from '@/types/database';
 
 export interface PlaceOrderResult {
   success: boolean;
@@ -178,6 +180,20 @@ export async function placeOrder(formData: CheckoutFormData): Promise<PlaceOrder
     if (itemsInsertError) {
       console.error('Failed to insert order items snapshot:', itemsInsertError);
       // Order header is already created, so we log and proceed
+    }
+
+    // 8. Send Transactional Email Notification to Owner (Resend)
+    const { data: fullOrder } = await adminSupabase
+      .from('orders')
+      .select('*')
+      .eq('id', newOrder.id)
+      .single();
+
+    if (fullOrder) {
+      sendOwnerOrderNotificationEmail({
+        order: fullOrder as Order,
+        items: itemsToSnapshot,
+      }).catch((err) => console.warn('Email dispatch warning:', err));
     }
 
     return {

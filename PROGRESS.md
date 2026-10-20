@@ -52,10 +52,16 @@
   - Payment toggle to mark cash/UPI orders as Paid
   - Menu Manager (`/admin/menu`) with 1-click sold-out switch, edit price, and photo upload
   - Settings manager (`/admin/settings`) with emergency order switch, hours, fees, and brand color
-- [/] **Phase 7 – Email Notifications & Payment:** In Progress
-  - Resend transactional email integration sending instant order notification to owner (`bchaitanya096@gmail.com`)
-  - Optional Razorpay checkout & signature-verified webhook architecture ready
-- [ ] **Phase 8 – Polish, SEO & Accessibility:** Not Started
+- [x] **Phase 7 – Email Notifications & Payment:** Completed
+  - Resend transactional email notification wired into `placeOrder` server action
+  - Rich HTML order receipts dispatched to owner email (`bchaitanya096@gmail.com`)
+  - Razorpay cryptographic webhook signature verification helper implemented (`crypto.timingSafeEqual`)
+  - Webhook route `/api/webhooks/razorpay` active; strictly marks orders paid only upon verified payment webhook
+- [/] **Phase 8 – Polish, SEO & Accessibility:** In Progress
+  - OpenGraph social cards, meta tags, and Restaurant JSON-LD structured schema
+  - robots.txt & dynamic sitemap.xml
+  - Legal & trust pages: Privacy Policy, Terms of Service, Cancellation & Refund Policy, Contact Page
+  - WCAG 2.2 AA accessibility focus rings, high contrast, and keyboard navigation
 - [ ] **Phase 9 – Testing (Unit, E2E, Axe, RLS, CI):** Not Started
 - [ ] **Phase 10 – Production Deployment & Launch:** Not Started
 - [ ] **Phase 11 – Handover & Documentation:** Not Started
