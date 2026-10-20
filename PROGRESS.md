@@ -20,13 +20,18 @@
   - Order flow & state transitions defined
   - Database schema & RLS security model drafted
   - Wireframes created for Home, Menu, Cart, Checkout, Confirmation, Staff Dashboard
-- [/] **Phase 2 – Setup:** In Progress
+- [x] **Phase 2 – Setup:** Completed
   - Next.js 16 (App Router) + TypeScript + Tailwind CSS initialized
   - Core libraries installed (@supabase/supabase-js, @supabase/ssr, zod, react-hook-form, lucide-react, resend)
   - Supabase client, server, and admin helpers configured
   - .env.example created with placeholders; .env.local created (git-ignored)
-  - Build verification passed
-- [ ] **Phase 3 – Database & RLS:** Not Started
+  - Successfully deployed to Vercel at `joshrestaurent.vercel.app`
+- [/] **Phase 3 – Database & RLS:** In Progress
+  - Database schema drafted with tables: categories, menu_items, orders, order_items, restaurant_settings
+  - Row Level Security (RLS) policies defined for public read & staff isolation
+  - Photo storage bucket configured (`dish-photos`)
+  - Seed menu catalog added for South Indian Tiffins, Biryanis, and Beverages
+  - Anonymous security test script created (`rls_security_test.sql`)
 - [ ] **Phase 4 – Menu Pages & Browsing:** Not Started
 - [ ] **Phase 5 – Cart, Server-side Pricing & Checkout:** Not Started
 - [ ] **Phase 6 – Owner Live Dashboard & Menu Manager:** Not Started
