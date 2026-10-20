@@ -123,6 +123,20 @@ export default function CheckoutPage() {
     router.push(`/order-confirmation/${result.orderNumber}`);
   };
 
+  const onFormError = (formErrors: Record<string, any>) => {
+    const errorKeys = Object.keys(formErrors);
+    if (errorKeys.length > 0) {
+      const firstKey = errorKeys[0];
+      const el = document.getElementById(firstKey) || document.getElementsByName(firstKey)[0];
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.focus();
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+  };
+
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-16">
       {/* Page Title & Back Link */}
@@ -155,7 +169,7 @@ export default function CheckoutPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Main Checkout Form (7 cols) */}
-        <form onSubmit={handleSubmit(onSubmit)} className="lg:col-span-7 space-y-6">
+        <form onSubmit={handleSubmit(onSubmit, onFormError)} className="lg:col-span-7 space-y-6">
           {/* Step 1: Order Type Selector */}
           <div className="p-5 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xs space-y-3">
             <h2 className="text-sm font-bold uppercase tracking-wider text-stone-400">
@@ -380,23 +394,42 @@ export default function CheckoutPage() {
           </div>
 
           {/* Place Order CTA Button */}
-          <button
-            type="submit"
-            disabled={isSubmitting || (orderType === 'delivery' && subtotalPaise < minOrderPaise)}
-            className="w-full py-4 px-6 rounded-2xl bg-amber-600 hover:bg-amber-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-base shadow-xl shadow-amber-600/20 transition flex items-center justify-center gap-2"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Confirming Order with Kitchen...</span>
-              </>
-            ) : (
-              <>
-                <Lock className="w-4 h-4" />
-                <span>Confirm Order • {formatPaiseToRupees(effectiveTotalPaise)}</span>
-              </>
+          <div className="space-y-3">
+            {Object.keys(errors).length > 0 && (
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-semibold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>Please fill in your Name, 10-digit Phone Number, and Address above.</span>
+              </div>
             )}
-          </button>
+
+            {serverError && (
+              <div
+                role="alert"
+                className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-2"
+              >
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{serverError}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isSubmitting || (orderType === 'delivery' && subtotalPaise < minOrderPaise)}
+              className="w-full py-4 px-6 rounded-2xl bg-amber-600 hover:bg-amber-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-base shadow-xl shadow-amber-600/20 transition flex items-center justify-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Confirming Order with Kitchen...</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-4 h-4" />
+                  <span>Confirm Order • {formatPaiseToRupees(effectiveTotalPaise)}</span>
+                </>
+              )}
+            </button>
+          </div>
         </form>
 
         {/* Order Summary Sidebar (5 cols) */}
