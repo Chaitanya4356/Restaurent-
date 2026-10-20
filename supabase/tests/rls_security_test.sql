@@ -20,7 +20,7 @@ INSERT INTO public.orders (
     28000,
     'cash_on_delivery',
     'pending'
-) ON CONFLICT (id) DO NOTHING;
+) ON CONFLICT (id) DO NOTHING;  
 
 -- 2. Switch session role to 'anon' (simulating anonymous customer or malicious scraper)
 SET ROLE anon;
@@ -40,3 +40,5 @@ RESET ROLE;
 
 -- 5. Cleanup test order
 DELETE FROM public.orders WHERE id = '99999999-9999-9999-9999-999999999999';
+
+
