@@ -68,8 +68,14 @@
   - AxeBuilder accessibility audit suite for WCAG 2.1 AA compliance with 0 critical violations (`tests/e2e/accessibility.spec.ts`)
   - Dedicated pricing calculation engine in `src/lib/pricing.ts`
   - GitHub Actions CI pipeline (`.github/workflows/ci.yml`) validating lint, typecheck, Vitest, and production build
-- [ ] **Phase 10 – Production Deployment & Launch:** Next
-- [ ] **Phase 11 – Handover & Documentation:** Not Started
+- [x] **Phase 10 – Production Deployment & Launch:** Completed
+  - Deployed to Vercel production at `https://joshrestaurent.vercel.app`
+  - Production environment variables wired (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL`)
+  - Live production menu verified fetching all 10 dishes directly from Supabase
+  - Live IST opening hours & order cutoff dynamic status validated in production
+- [x] **Phase 11 – Handover & Documentation:** Completed
+  - Comprehensive operations guide created in `docs/OPERATIONS_MANUAL.md` (daily opening checklist, live order management with audio chime, 1-click Sold Out toggle, price & menu updates, delivery controls, and Supabase backup instructions)
+  - Full production README.md created with badges, live URLs, feature breakdown, testing commands, and local development setup
 
 ---
 
