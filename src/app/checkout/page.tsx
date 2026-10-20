@@ -5,7 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCart } from '@/context/CartContext';
-import { checkoutFormSchema, type CheckoutFormData } from '@/lib/validation/checkout';
+import {
+  checkoutCustomerFieldsSchema,
+  type CheckoutFormData,
+  type CheckoutCustomerFields,
+} from '@/lib/validation/checkout';
 import { placeOrder } from '@/app/actions/place-order';
 import { formatPaiseToRupees } from '@/lib/utils';
 import Link from 'next/link';
@@ -47,8 +51,8 @@ export default function CheckoutPage() {
     setValue,
     watch,
     formState: { errors },
-  } = useForm<CheckoutFormData>({
-    resolver: zodResolver(checkoutFormSchema),
+  } = useForm<CheckoutCustomerFields>({
+    resolver: zodResolver(checkoutCustomerFieldsSchema),
     defaultValues: {
       orderType: 'delivery',
       customerName: '',
@@ -57,11 +61,6 @@ export default function CheckoutPage() {
       preferredTime: 'ASAP',
       customerNotes: '',
       paymentMethod: 'upi_on_delivery',
-      items: items.map((i) => ({
-        menuItemId: i.item.id,
-        quantity: i.quantity,
-        notes: i.notes || '',
-      })),
     },
   });
 
@@ -94,13 +93,19 @@ export default function CheckoutPage() {
   const effectiveDeliveryFeePaise = orderType === 'pickup' ? 0 : deliveryFeePaise;
   const effectiveTotalPaise = subtotalPaise + effectiveDeliveryFeePaise;
 
-  const onSubmit = async (data: CheckoutFormData) => {
+  const onSubmit = async (customerData: CheckoutCustomerFields) => {
     setIsSubmitting(true);
     setServerError(null);
 
-    // Synchronize latest items from cart into form data
+    if (items.length === 0) {
+      setServerError('Your cart is empty. Please add items from the menu.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Assemble validated customer fields with current items from cart
     const payload: CheckoutFormData = {
-      ...data,
+      ...customerData,
       orderType,
       items: items.map((i) => ({
         menuItemId: i.item.id,
