@@ -3,6 +3,7 @@
 import { checkoutFormSchema, type CheckoutFormData } from '@/lib/validation/checkout';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { calculateStoreStatus } from '@/lib/opening-hours';
+import { calculateDeliveryFee, validateDeliveryMinimum } from '@/lib/pricing';
 import { sendOwnerOrderNotificationEmail } from '@/lib/email/order-notification';
 import type { Order } from '@/types/database';
 
@@ -116,22 +117,26 @@ export async function placeOrder(formData: CheckoutFormData): Promise<PlaceOrder
     }
 
     // 4. Validate Delivery Limits & Fees
-    let deliveryFeePaise = 0;
-    if (data.orderType === 'delivery') {
-      if (recalculatedSubtotalPaise < settings.min_delivery_order_paise) {
-        const minRupees = settings.min_delivery_order_paise / 100;
-        return {
-          success: false,
-          error: `Minimum order amount for delivery in Vizag is ₹${minRupees}. Please add more items.`,
-        };
-      }
+    const deliveryCheck = validateDeliveryMinimum(
+      recalculatedSubtotalPaise,
+      data.orderType,
+      settings.min_delivery_order_paise
+    );
 
-      if (recalculatedSubtotalPaise >= settings.free_delivery_threshold_paise) {
-        deliveryFeePaise = 0;
-      } else {
-        deliveryFeePaise = settings.delivery_fee_paise;
-      }
+    if (!deliveryCheck.isValid) {
+      const minRupees = settings.min_delivery_order_paise / 100;
+      return {
+        success: false,
+        error: `Minimum order amount for delivery in Vizag is ₹${minRupees}. Please add more items.`,
+      };
     }
+
+    const deliveryFeePaise = calculateDeliveryFee(
+      recalculatedSubtotalPaise,
+      data.orderType,
+      settings.free_delivery_threshold_paise,
+      settings.delivery_fee_paise
+    );
 
     const recalculatedTotalPaise = recalculatedSubtotalPaise + deliveryFeePaise;
 

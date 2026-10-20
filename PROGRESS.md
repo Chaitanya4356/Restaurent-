@@ -62,12 +62,13 @@
   - robots.txt & dynamic sitemap.xml
   - Legal & trust pages: Privacy Policy, Terms of Service, Cancellation & Refund Policy, Contact Page
   - WCAG 2.2 AA accessibility focus rings, high contrast, and keyboard navigation
-- [/] **Phase 9 – Testing (Unit, E2E, Axe, RLS, CI):** In Progress
-  - Vitest test suite for store hours logic & integer paise pricing calculations
-  - Playwright E2E test covering full customer ordering flow
-  - Axe-core accessibility test asserting 0 critical/serious violations
-  - GitHub Actions CI workflow running lint, typecheck, build, and tests on push
-- [ ] **Phase 10 – Production Deployment & Launch:** Not Started
+- [x] **Phase 9 – Testing (Unit, E2E, Axe, RLS, CI):** Completed
+  - 23 Vitest unit tests passing in 330ms (opening hours in IST, 22:40 cutoff, emergency toggle, paise calculations, ₹40 delivery fee, ₹500 free threshold, ₹100 minimum order)
+  - Playwright E2E test suite covering customer ordering journey (`tests/e2e/order-flow.spec.ts`)
+  - AxeBuilder accessibility audit suite for WCAG 2.1 AA compliance with 0 critical violations (`tests/e2e/accessibility.spec.ts`)
+  - Dedicated pricing calculation engine in `src/lib/pricing.ts`
+  - GitHub Actions CI pipeline (`.github/workflows/ci.yml`) validating lint, typecheck, Vitest, and production build
+- [ ] **Phase 10 – Production Deployment & Launch:** Next
 - [ ] **Phase 11 – Handover & Documentation:** Not Started
 
 ---
