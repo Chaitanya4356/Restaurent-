@@ -26,13 +26,17 @@
   - Supabase client, server, and admin helpers configured
   - .env.example created with placeholders; .env.local created (git-ignored)
   - Successfully deployed to Vercel at `joshrestaurent.vercel.app`
-- [/] **Phase 3 – Database & RLS:** In Progress
-  - Database schema drafted with tables: categories, menu_items, orders, order_items, restaurant_settings
-  - Row Level Security (RLS) policies defined for public read & staff isolation
-  - Photo storage bucket configured (`dish-photos`)
-  - Seed menu catalog added for South Indian Tiffins, Biryanis, and Beverages
-  - Anonymous security test script created (`rls_security_test.sql`)
-- [ ] **Phase 4 – Menu Pages & Browsing:** Not Started
+- [x] **Phase 3 – Database & RLS:** Completed
+  - PostgreSQL schema created (categories, menu_items, restaurant_settings, orders, order_items)
+  - Row Level Security (RLS) active and verified with automated test
+  - `dish-photos` storage bucket provisioned
+  - Supabase Realtime publication configured on `orders`
+  - Seed menu catalog populated with authentic Tiffins, Biryanis, and Beverages
+- [/] **Phase 4 – Menu Pages & Browsing:** In Progress
+  - Layout with responsive navigation header, sticky cart counter, and footer
+  - Operating hours & open/closed badge logic in `Asia/Kolkata`
+  - Dynamic brand color support
+  - Menu catalog with category grouping, dietary filters (Veg/Non-Veg), search, and sold-out states
 - [ ] **Phase 5 – Cart, Server-side Pricing & Checkout:** Not Started
 - [ ] **Phase 6 – Owner Live Dashboard & Menu Manager:** Not Started
 - [ ] **Phase 7 – Email Notifications & Payment:** Not Started
