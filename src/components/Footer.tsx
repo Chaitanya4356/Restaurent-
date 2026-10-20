@@ -101,10 +101,28 @@ export function Footer({
                   Track Live Order
                 </Link>
               </li>
-              <li className="pt-2 border-t border-stone-800">
+              <li>
+                <Link href="/contact" className="hover:text-amber-400 transition">
+                  Contact & Location
+                </Link>
+              </li>
+              <li className="pt-2 border-t border-stone-800 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                <Link href="/privacy" className="hover:text-amber-400 transition">
+                  Privacy
+                </Link>
+                <span>•</span>
+                <Link href="/terms" className="hover:text-amber-400 transition">
+                  Terms
+                </Link>
+                <span>•</span>
+                <Link href="/refund" className="hover:text-amber-400 transition">
+                  Refunds
+                </Link>
+              </li>
+              <li className="pt-1">
                 <Link
                   href="/admin/login"
-                  className="text-xs text-stone-400 hover:text-stone-300 transition"
+                  className="text-xs text-stone-500 hover:text-stone-300 transition"
                 >
                   🔒 Staff / Owner Portal
                 </Link>

@@ -57,12 +57,16 @@
   - Rich HTML order receipts dispatched to owner email (`bchaitanya096@gmail.com`)
   - Razorpay cryptographic webhook signature verification helper implemented (`crypto.timingSafeEqual`)
   - Webhook route `/api/webhooks/razorpay` active; strictly marks orders paid only upon verified payment webhook
-- [/] **Phase 8 – Polish, SEO & Accessibility:** In Progress
+- [x] **Phase 8 – Polish, SEO & Accessibility:** Completed
   - OpenGraph social cards, meta tags, and Restaurant JSON-LD structured schema
   - robots.txt & dynamic sitemap.xml
   - Legal & trust pages: Privacy Policy, Terms of Service, Cancellation & Refund Policy, Contact Page
   - WCAG 2.2 AA accessibility focus rings, high contrast, and keyboard navigation
-- [ ] **Phase 9 – Testing (Unit, E2E, Axe, RLS, CI):** Not Started
+- [/] **Phase 9 – Testing (Unit, E2E, Axe, RLS, CI):** In Progress
+  - Vitest test suite for store hours logic & integer paise pricing calculations
+  - Playwright E2E test covering full customer ordering flow
+  - Axe-core accessibility test asserting 0 critical/serious violations
+  - GitHub Actions CI workflow running lint, typecheck, build, and tests on push
 - [ ] **Phase 10 – Production Deployment & Launch:** Not Started
 - [ ] **Phase 11 – Handover & Documentation:** Not Started
 
