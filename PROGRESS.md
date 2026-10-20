@@ -32,12 +32,17 @@
   - `dish-photos` storage bucket provisioned
   - Supabase Realtime publication configured on `orders`
   - Seed menu catalog populated with authentic Tiffins, Biryanis, and Beverages
-- [/] **Phase 4 – Menu Pages & Browsing:** In Progress
-  - Layout with responsive navigation header, sticky cart counter, and footer
-  - Operating hours & open/closed badge logic in `Asia/Kolkata`
-  - Dynamic brand color support
-  - Menu catalog with category grouping, dietary filters (Veg/Non-Veg), search, and sold-out states
-- [ ] **Phase 5 – Cart, Server-side Pricing & Checkout:** Not Started
+- [x] **Phase 4 – Menu Pages & Browsing:** Completed
+  - Responsive header with branding, click-to-call, and live cart counter
+  - Operating hours & open/closed badge computed in `Asia/Kolkata`
+  - Accessible slide-out Cart Drawer with item notes and free delivery meter
+  - High-impact Home page with popular dishes preview and delivery perks
+  - Live Menu page with category grouping, instant search, Veg/Non-Veg toggles, and sold-out states
+- [/] **Phase 5 – Cart, Server-side Pricing & Checkout:** In Progress
+  - Persistent cart state in local storage
+  - Checkout form with Zod schema (pickup vs 20km delivery, preferred time, cash/UPI payment)
+  - Strict server action pricing recalculation from Supabase (never trusts browser total)
+  - Order confirmation receipt & live order tracker
 - [ ] **Phase 6 – Owner Live Dashboard & Menu Manager:** Not Started
 - [ ] **Phase 7 – Email Notifications & Payment:** Not Started
 - [ ] **Phase 8 – Polish, SEO & Accessibility:** Not Started
