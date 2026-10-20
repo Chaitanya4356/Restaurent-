@@ -45,13 +45,16 @@
   - Historical snapshot of dishes and prices in `order_items`
   - Live order confirmation page with real-time status tracker and receipt
   - Fast order lookup page at `/track`
-- [/] **Phase 6 – Owner Live Dashboard & Menu Manager:** In Progress
-  - Staff authentication login (`/admin/login`) with Supabase Auth
-  - Real-time kitchen orders dashboard with audio chime notification on new orders
-  - Order status changer: New ➔ Preparing ➔ Ready ➔ Completed (or Cancelled)
-  - Menu Manager (add/edit items, price changes, sold-out switch, photo upload)
-  - Settings manager (operating hours, emergency accepting orders switch, delivery fee)
-- [ ] **Phase 7 – Email Notifications & Payment:** Not Started
+- [x] **Phase 6 – Owner Live Dashboard & Menu Manager:** Completed
+  - Staff login screen at `/admin/login` using Supabase Auth
+  - Real-time kitchen orders display (`/admin/orders`) with Web Audio API chime notifications
+  - Quick status changer: New ➔ Preparing ➔ Ready ➔ Completed (or Cancelled)
+  - Payment toggle to mark cash/UPI orders as Paid
+  - Menu Manager (`/admin/menu`) with 1-click sold-out switch, edit price, and photo upload
+  - Settings manager (`/admin/settings`) with emergency order switch, hours, fees, and brand color
+- [/] **Phase 7 – Email Notifications & Payment:** In Progress
+  - Resend transactional email integration sending instant order notification to owner (`bchaitanya096@gmail.com`)
+  - Optional Razorpay checkout & signature-verified webhook architecture ready
 - [ ] **Phase 8 – Polish, SEO & Accessibility:** Not Started
 - [ ] **Phase 9 – Testing (Unit, E2E, Axe, RLS, CI):** Not Started
 - [ ] **Phase 10 – Production Deployment & Launch:** Not Started
