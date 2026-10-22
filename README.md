@@ -35,6 +35,7 @@
 - **1-Click Sold Out Toggle:** Instant shortage management to mark items unavailable on the public menu during peak hours.
 - **Dishes & Media Management:** Add dishes, edit descriptions, adjust prices, and upload food photos to Supabase Storage.
 - **Store Controls:** Configure delivery radius (20 km), flat delivery fee (₹40), free delivery qualification (₹500), and emergency pause switch.
+- **Live Settings Everywhere:** Every value in `/admin/settings` - fees, thresholds, phone, address, opening hours and brand colour - is read from the database and applied across the storefront, so the cart total always matches what the server charges.
 
 ### 🛡️ Security & Financial Integrity
 - **Staff-Only Portal:** The entire `/admin` area (kitchen dashboard, menu manager, settings) sits behind Supabase Auth. An optimistic gate in `src/proxy.ts` redirects signed-out visitors to the login screen, and a secure `requireStaff()` check in every staff page and server action blocks the underlying data (which uses the RLS-bypassing service-role key).

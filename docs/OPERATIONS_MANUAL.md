@@ -78,6 +78,12 @@ Navigate to [Admin Settings](https://joshrestaurent.vercel.app/admin/settings) t
 4. **Minimum Order Amount:** Change the minimum cart value for delivery (default: ₹100).
 5. **Operating Hours:** Adjust opening time, closing time, or order cutoff buffer (default: 20 minutes).
 
+> **Live settings:** every value above (plus the phone number, address and brand
+> colour) is read from the database by the customer website on each visit. After
+> saving, refresh the customer site to confirm - the cart, checkout button, menu,
+> footer and contact page all use the same values, so the price the customer sees
+> always matches the price the kitchen receives.
+
 ---
 
 ## 🔐 Staff Portal Access (Owner & Kitchen Staff)

@@ -13,12 +13,19 @@ import {
   Star,
 } from 'lucide-react';
 import { createPublicServerClient } from '@/lib/supabase/public';
+import { getPublicSettings } from '@/lib/settings';
 import type { MenuItem } from '@/types/database';
-import { formatPaiseToRupees } from '@/lib/utils';
+import { formatPaiseToRupees, formatTimeTo12h, minusMinutesFromTime } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
+  const settings = await getPublicSettings();
+  const openingLabel = formatTimeTo12h(settings.opening_time);
+  const closingLabel = formatTimeTo12h(settings.closing_time);
+  const cutoffLabel = formatTimeTo12h(
+    minusMinutesFromTime(settings.closing_time, settings.order_cutoff_minutes)
+  );
   // Fetch sample featured dishes from Supabase
   let featuredDishes: MenuItem[] = [];
   try {
@@ -36,7 +43,7 @@ export default async function HomePage() {
   return (
     <div className="space-y-12 sm:space-y-16">
       {/* Hero Section */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-600 via-orange-600 to-amber-700 text-white p-6 sm:p-10 lg:p-14 shadow-2xl">
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand via-brand to-brand-dark text-white p-6 sm:p-10 lg:p-14 shadow-2xl">
         <div className="relative z-10 max-w-2xl space-y-6">
           {/* Live Open / Closed Badge */}
           <div>
@@ -63,11 +70,11 @@ export default async function HomePage() {
             </Link>
 
             <a
-              href="tel:+919876543210"
+              href={`tel:${settings.phone_number.replace(/\s+/g, '')}`}
               className="inline-flex items-center gap-2 px-5 py-3.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 active:scale-95 text-white font-semibold text-sm backdrop-blur-xs transition"
             >
               <Phone className="w-4 h-4" />
-              <span>Call: +91 98765 43210</span>
+              <span>Call: {settings.phone_number}</span>
             </a>
           </div>
 
@@ -130,10 +137,10 @@ export default async function HomePage() {
           </div>
           <div className="space-y-1">
             <h3 className="font-bold text-base text-stone-900 dark:text-stone-100">
-              Open 7:00 AM – 11:00 PM
+              Open {openingLabel} – {closingLabel}
             </h3>
             <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
-              Morning breakfast, afternoon biryanis, and late-night cravings. Kitchen accepts orders until 10:40 PM every night.
+              Morning breakfast, afternoon biryanis, and late-night cravings. Kitchen accepts orders until {cutoffLabel} every night.
             </p>
           </div>
         </div>
@@ -214,7 +221,7 @@ export default async function HomePage() {
             Visit Our Counter
           </span>
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
-            Josh Restaurant, Visakhapatnam
+            {settings.restaurant_name} Restaurant, {settings.city}
           </h2>
           <p className="text-sm text-stone-400">
             Conveniently located near Beach Road, Siripuram. Dine-in, pickup counter, and fast 20 km city delivery available.
@@ -227,7 +234,7 @@ export default async function HomePage() {
             <div className="text-xs space-y-1">
               <p className="font-bold text-stone-200 text-sm">Restaurant Address</p>
               <p className="text-stone-400">
-                Beach Road, Siripuram, Visakhapatnam, Andhra Pradesh 530003
+                {settings.address}
               </p>
             </div>
           </div>
@@ -237,7 +244,7 @@ export default async function HomePage() {
             <div className="text-xs space-y-1">
               <p className="font-bold text-stone-200 text-sm">Service Hours</p>
               <p className="text-stone-400">
-                Daily: 07:00 AM – 11:00 PM IST (Orders cutoff at 10:40 PM)
+                Daily: {openingLabel} – {closingLabel} IST (Orders cutoff at {cutoffLabel})
               </p>
             </div>
           </div>

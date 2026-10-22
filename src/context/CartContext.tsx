@@ -1,7 +1,13 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useSyncExternalStore } from 'react';
 import type { MenuItem } from '@/types/database';
+import {
+  DEFAULT_DELIVERY_FEE_PAISE,
+  DEFAULT_FREE_DELIVERY_THRESHOLD_PAISE,
+  DEFAULT_MIN_DELIVERY_ORDER_PAISE,
+  calculateOrderTotals,
+} from '@/lib/pricing';
 
 export interface CartItem {
   item: MenuItem;
@@ -27,57 +33,115 @@ interface CartContextType {
   setIsCartDrawerOpen: (open: boolean) => void;
 }
 
+interface CartProviderProps {
+  children: React.ReactNode;
+  /** Live value from restaurant_settings (falls back to the platform defaults). */
+  deliveryFeePaise?: number;
+  freeDeliveryThresholdPaise?: number;
+  minOrderPaise?: number;
+}
+
 const CART_STORAGE_KEY = 'josh_restaurant_cart_v1';
-const DELIVERY_FEE_PAISE = 4000; // ₹40.00
-const FREE_DELIVERY_THRESHOLD_PAISE = 50000; // ₹500.00
-const MIN_ORDER_PAISE = 10000; // ₹100.00
+const EMPTY_CART: CartItem[] = [];
+
+/**
+ * The cart lives in a tiny module-level store backed by localStorage and is
+ * read through `useSyncExternalStore`.
+ *
+ * Why not `useEffect` + `setState`? Reading localStorage inside an effect
+ * causes a cascading render (and a lint error), and it flashes an empty cart
+ * on every page load. `useSyncExternalStore` uses `getServerSnapshot` during
+ * SSR/hydration and the real snapshot immediately after, so there is no
+ * hydration mismatch and no effect needed.
+ */
+let cachedItems: CartItem[] | null = null;
+const listeners = new Set<() => void>();
+
+function readCartFromStorage(): CartItem[] {
+  if (typeof window === 'undefined') return EMPTY_CART;
+
+  try {
+    const raw = window.localStorage.getItem(CART_STORAGE_KEY);
+    if (!raw) return EMPTY_CART;
+
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return EMPTY_CART;
+
+    // Defensive: ignore malformed entries instead of crashing the storefront.
+    return parsed.filter(
+      (entry): entry is CartItem =>
+        !!entry &&
+        typeof entry === 'object' &&
+        'item' in entry &&
+        'quantity' in entry &&
+        typeof (entry as CartItem).quantity === 'number' &&
+        !!(entry as CartItem).item?.id
+    );
+  } catch (e) {
+    console.error('Failed to read cart from localStorage:', e);
+    return EMPTY_CART;
+  }
+}
+
+function getSnapshot(): CartItem[] {
+  if (cachedItems === null) {
+    cachedItems = readCartFromStorage();
+  }
+  return cachedItems;
+}
+
+function getServerSnapshot(): CartItem[] {
+  return EMPTY_CART;
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function commitCart(updater: (previous: CartItem[]) => CartItem[]) {
+  const next = updater(getSnapshot());
+  cachedItems = next;
+
+  try {
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(next));
+  } catch (e) {
+    console.error('Failed to save cart to localStorage:', e);
+  }
+
+  listeners.forEach((listener) => listener());
+}
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
-
-  // Load from localStorage on client mount
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(CART_STORAGE_KEY);
-      if (stored) {
-        setItems(JSON.parse(stored));
-      }
-    } catch (e) {
-      console.error('Failed to parse cart from localStorage:', e);
-    } finally {
-      setIsInitialized(true);
-    }
-  }, []);
-
-  // Save to localStorage whenever items change
-  useEffect(() => {
-    if (isInitialized) {
-      try {
-        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-      } catch (e) {
-        console.error('Failed to save cart to localStorage:', e);
-      }
-    }
-  }, [items, isInitialized]);
+export function CartProvider({
+  children,
+  deliveryFeePaise: configuredDeliveryFeePaise = DEFAULT_DELIVERY_FEE_PAISE,
+  freeDeliveryThresholdPaise = DEFAULT_FREE_DELIVERY_THRESHOLD_PAISE,
+  minOrderPaise = DEFAULT_MIN_DELIVERY_ORDER_PAISE,
+}: CartProviderProps) {
+  const items = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const [isCartDrawerOpen, setIsCartDrawerOpen] = React.useState(false);
 
   const addToCart = (item: MenuItem, quantity: number = 1, notes: string = '') => {
     if (item.is_sold_out) return;
 
-    setItems((prev) => {
-      const existingIndex = prev.findIndex((ci) => ci.item.id === item.id);
+    commitCart((previous) => {
+      const existingIndex = previous.findIndex((cartItem) => cartItem.item.id === item.id);
+
       if (existingIndex > -1) {
-        const updated = [...prev];
-        updated[existingIndex].quantity += quantity;
-        if (notes && !updated[existingIndex].notes) {
-          updated[existingIndex].notes = notes;
-        }
+        const updated = [...previous];
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          quantity: updated[existingIndex].quantity + quantity,
+          notes: updated[existingIndex].notes || notes,
+        };
         return updated;
       }
-      return [...prev, { item, quantity, notes }];
+
+      return [...previous, { item, quantity, notes }];
     });
   };
 
@@ -86,41 +150,44 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       removeFromCart(itemId);
       return;
     }
-    setItems((prev) =>
-      prev.map((ci) => (ci.item.id === itemId ? { ...ci, quantity } : ci))
+
+    commitCart((previous) =>
+      previous.map((cartItem) =>
+        cartItem.item.id === itemId ? { ...cartItem, quantity } : cartItem
+      )
     );
   };
 
   const updateNotes = (itemId: string, notes: string) => {
-    setItems((prev) =>
-      prev.map((ci) => (ci.item.id === itemId ? { ...ci, notes } : ci))
+    commitCart((previous) =>
+      previous.map((cartItem) =>
+        cartItem.item.id === itemId ? { ...cartItem, notes } : cartItem
+      )
     );
   };
 
   const removeFromCart = (itemId: string) => {
-    setItems((prev) => prev.filter((ci) => ci.item.id !== itemId));
+    commitCart((previous) => previous.filter((cartItem) => cartItem.item.id !== itemId));
   };
 
   const clearCart = () => {
-    setItems([]);
+    commitCart(() => EMPTY_CART);
   };
 
-  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
-  const subtotalPaise = items.reduce(
-    (sum, item) => sum + item.item.price_paise * item.quantity,
-    0
-  );
+  const itemCount = items.reduce((sum, cartItem) => sum + cartItem.quantity, 0);
 
-  const deliveryFeePaise =
-    subtotalPaise === 0 || subtotalPaise >= FREE_DELIVERY_THRESHOLD_PAISE
-      ? 0
-      : DELIVERY_FEE_PAISE;
-
-  const totalPaise = subtotalPaise + deliveryFeePaise;
-  const amountToFreeDeliveryPaise = Math.max(
-    0,
-    FREE_DELIVERY_THRESHOLD_PAISE - subtotalPaise
-  );
+  // Single source of truth for the money maths: the same engine the server
+  // uses, fed with the live delivery settings from the database.
+  const totals = calculateOrderTotals({
+    items: items.map((cartItem) => ({
+      pricePaise: cartItem.item.price_paise,
+      quantity: cartItem.quantity,
+    })),
+    orderType: 'delivery',
+    thresholdPaise: freeDeliveryThresholdPaise,
+    feePaise: configuredDeliveryFeePaise,
+    minOrderPaise,
+  });
 
   return (
     <CartContext.Provider
@@ -132,12 +199,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         removeFromCart,
         clearCart,
         itemCount,
-        subtotalPaise,
-        deliveryFeePaise,
-        totalPaise,
-        freeDeliveryThresholdPaise: FREE_DELIVERY_THRESHOLD_PAISE,
-        amountToFreeDeliveryPaise,
-        minOrderPaise: MIN_ORDER_PAISE,
+        subtotalPaise: totals.subtotalPaise,
+        deliveryFeePaise: totals.deliveryFeePaise,
+        totalPaise: totals.totalPaise,
+        freeDeliveryThresholdPaise,
+        amountToFreeDeliveryPaise: totals.amountToFreeDeliveryPaise,
+        minOrderPaise,
         isCartDrawerOpen,
         setIsCartDrawerOpen,
       }}

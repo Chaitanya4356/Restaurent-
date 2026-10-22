@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCart } from '@/context/CartContext';
 import {
@@ -34,8 +34,6 @@ export default function CheckoutPage() {
     itemCount,
     subtotalPaise,
     deliveryFeePaise,
-    totalPaise,
-    freeDeliveryThresholdPaise,
     amountToFreeDeliveryPaise,
     minOrderPaise,
     clearCart,
@@ -128,7 +126,7 @@ export default function CheckoutPage() {
     router.push(`/order-confirmation/${result.orderNumber}`);
   };
 
-  const onFormError = (formErrors: Record<string, any>) => {
+  const onFormError = (formErrors: FieldErrors<CheckoutCustomerFields>) => {
     const errorKeys = Object.keys(formErrors);
     if (errorKeys.length > 0) {
       const firstKey = errorKeys[0];
@@ -420,7 +418,7 @@ export default function CheckoutPage() {
             <button
               type="submit"
               disabled={isSubmitting || (orderType === 'delivery' && subtotalPaise < minOrderPaise)}
-              className="w-full py-4 px-6 rounded-2xl bg-amber-600 hover:bg-amber-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-base shadow-xl shadow-amber-600/20 transition flex items-center justify-center gap-2"
+              className="w-full py-4 px-6 rounded-2xl bg-brand hover:bg-brand-dark active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-base shadow-xl shadow-brand/20 transition flex items-center justify-center gap-2"
             >
               {isSubmitting ? (
                 <>
@@ -509,7 +507,7 @@ export default function CheckoutPage() {
 
               <div className="border-t border-stone-200 dark:border-stone-800 pt-3 flex justify-between text-base font-black text-stone-900 dark:text-stone-100">
                 <span>Total Amount</span>
-                <span className="text-amber-600 dark:text-amber-400">
+                <span className="text-brand">
                   {formatPaiseToRupees(effectiveTotalPaise)}
                 </span>
               </div>

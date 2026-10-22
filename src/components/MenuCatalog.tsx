@@ -79,6 +79,23 @@ export function MenuCatalog({
 
   return (
     <div className="space-y-6 pb-20">
+      {/* Kitchen paused notice (driven by restaurant_settings.is_accepting_orders) */}
+      {!isAcceptingOrders && (
+        <div
+          role="status"
+          className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-sm font-semibold flex items-start gap-3"
+        >
+          <Ban className="w-5 h-5 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold">Online ordering is paused right now</p>
+            <p className="text-xs font-medium mt-0.5">
+              You can browse the menu, but orders cannot be placed at the moment. Please call the
+              restaurant or check back shortly.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Search and Filters Header */}
       <div className="sticky top-16 sm:top-20 z-30 bg-white/95 dark:bg-stone-950/95 backdrop-blur-md py-3 border-b border-stone-200 dark:border-stone-800 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 space-y-3">
         {/* Search Bar */}
@@ -102,7 +119,7 @@ export function MenuCatalog({
               onClick={() => setSelectedCategory('all')}
               className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition ${
                 selectedCategory === 'all'
-                  ? 'bg-amber-600 text-white shadow-xs'
+                  ? 'bg-brand text-white shadow-xs'
                   : 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:bg-stone-200'
               }`}
             >
@@ -114,7 +131,7 @@ export function MenuCatalog({
                 onClick={() => setSelectedCategory(cat.id)}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition ${
                   selectedCategory === cat.id
-                    ? 'bg-amber-600 text-white shadow-xs'
+                    ? 'bg-brand text-white shadow-xs'
                     : 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:bg-stone-200'
                 }`}
               >
@@ -254,7 +271,16 @@ export function MenuCatalog({
                       </div>
 
                       {/* Add Button or Quantity Selector */}
-                      {dish.is_sold_out ? (
+                      {!isAcceptingOrders ? (
+                        <button
+                          disabled
+                          aria-disabled="true"
+                          className="px-4 py-1.5 rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-400 text-xs font-bold cursor-not-allowed border border-stone-200 dark:border-stone-700"
+                          title="Online ordering is currently paused by the restaurant"
+                        >
+                          Ordering Paused
+                        </button>
+                      ) : dish.is_sold_out ? (
                         <button
                           disabled
                           aria-disabled="true"
@@ -276,7 +302,7 @@ export function MenuCatalog({
                           </span>
                           <button
                             onClick={() => updateQuantity(dish.id, qtyInCart + 1)}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg bg-amber-600 text-white hover:bg-amber-700 font-bold transition"
+                            className="w-7 h-7 flex items-center justify-center rounded-lg bg-brand text-white hover:bg-brand-dark font-bold transition"
                             aria-label={`Increase ${dish.name}`}
                           >
                             <Plus className="w-3.5 h-3.5" />
@@ -285,7 +311,7 @@ export function MenuCatalog({
                       ) : (
                         <button
                           onClick={() => addToCart(dish, 1)}
-                          className="px-4 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-95 text-white text-xs font-bold shadow-xs hover:shadow-md transition flex items-center gap-1.5"
+                          className="px-4 py-1.5 rounded-xl bg-brand hover:bg-brand-dark active:scale-95 text-white text-xs font-bold shadow-xs hover:shadow-md transition flex items-center gap-1.5"
                           aria-label={`Add ${dish.name} to order`}
                         >
                           <Plus className="w-3.5 h-3.5" />
@@ -306,7 +332,7 @@ export function MenuCatalog({
         <div className="fixed bottom-4 inset-x-4 z-40 sm:hidden">
           <button
             onClick={() => setIsCartDrawerOpen(true)}
-            className="w-full bg-gradient-to-r from-amber-600 to-orange-600 text-white p-3.5 rounded-2xl shadow-xl shadow-amber-600/30 flex items-center justify-between font-bold text-sm active:scale-[0.98] transition"
+            className="w-full bg-gradient-to-r from-brand to-brand-dark text-white p-3.5 rounded-2xl shadow-xl shadow-brand/30 flex items-center justify-between font-bold text-sm active:scale-[0.98] transition"
           >
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-white text-amber-700 flex items-center justify-center text-xs font-black">

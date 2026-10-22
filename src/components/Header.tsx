@@ -11,12 +11,18 @@ interface HeaderProps {
   restaurantName?: string;
   phone?: string;
   isAcceptingOrders?: boolean;
+  openingTime?: string;
+  closingTime?: string;
+  orderCutoffMinutes?: number;
 }
 
 export function Header({
   restaurantName = 'Josh',
   phone = '+91 98765 43210',
   isAcceptingOrders = true,
+  openingTime = '07:00:00',
+  closingTime = '23:00:00',
+  orderCutoffMinutes = 20,
 }: HeaderProps) {
   const { itemCount, subtotalPaise, setIsCartDrawerOpen } = useCart();
 
@@ -30,7 +36,7 @@ export function Header({
               href="/"
               className="flex items-center gap-2.5 group focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-500 rounded-lg p-1"
             >
-              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-md shadow-orange-500/20 group-hover:scale-105 transition-transform">
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center text-white shadow-md shadow-black/20 group-hover:scale-105 transition-transform">
                 <UtensilsCrossed className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div className="flex flex-col">
@@ -45,7 +51,12 @@ export function Header({
 
             {/* Desktop Open Status Badge */}
             <div className="hidden md:block pl-2">
-              <OpenStatusBadge isAcceptingOrders={isAcceptingOrders} />
+              <OpenStatusBadge
+                isAcceptingOrders={isAcceptingOrders}
+                openingTime={openingTime}
+                closingTime={closingTime}
+                orderCutoffMinutes={orderCutoffMinutes}
+              />
             </div>
           </div>
 
@@ -72,14 +83,14 @@ export function Header({
             {/* Cart Button */}
             <button
               onClick={() => setIsCartDrawerOpen(true)}
-              className="relative inline-flex items-center gap-2 sm:gap-2.5 px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-medium text-xs sm:text-sm shadow-md shadow-amber-600/20 transition"
+              className="relative inline-flex items-center gap-2 sm:gap-2.5 px-3.5 py-2 rounded-xl bg-brand hover:bg-brand-dark active:scale-95 text-white font-medium text-xs sm:text-sm shadow-md shadow-brand/20 transition"
               aria-label={`Shopping cart with ${itemCount} items`}
             >
               <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="hidden sm:inline font-bold">Cart</span>
 
               {itemCount > 0 && (
-                <span className="inline-flex items-center justify-center bg-white text-amber-700 text-xs font-black px-1.5 py-0.5 rounded-full shadow-xs">
+                <span className="inline-flex items-center justify-center bg-white text-brand text-xs font-black px-1.5 py-0.5 rounded-full shadow-xs">
                   {itemCount}
                 </span>
               )}
@@ -95,7 +106,12 @@ export function Header({
 
         {/* Mobile Open Badge strip */}
         <div className="md:hidden py-1.5 border-t border-stone-100 dark:border-stone-900 flex justify-center">
-          <OpenStatusBadge isAcceptingOrders={isAcceptingOrders} />
+          <OpenStatusBadge
+            isAcceptingOrders={isAcceptingOrders}
+            openingTime={openingTime}
+            closingTime={closingTime}
+            orderCutoffMinutes={orderCutoffMinutes}
+          />
         </div>
       </div>
     </header>

@@ -3,11 +3,16 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* Owner-configurable brand colour (set inline by the (site) layout from
+     restaurant_settings.brand_color_primary). */
+  --brand: #e65100;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-brand: var(--brand);
+  --color-brand-dark: color-mix(in oklab, var(--brand) 82%, #000);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

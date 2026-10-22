@@ -94,7 +94,7 @@ export function CartDrawer() {
               </div>
               <div className="w-full h-2 bg-amber-200 dark:bg-amber-900 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-amber-600 transition-all duration-300"
+                  className="h-full bg-brand transition-all duration-300"
                   style={{ width: `${freeDeliveryProgressPercent}%` }}
                 />
               </div>
@@ -117,7 +117,7 @@ export function CartDrawer() {
                 <Link
                   href="/menu"
                   onClick={() => setIsCartDrawerOpen(false)}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-medium shadow-md transition"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand hover:bg-brand-dark text-white font-medium shadow-md transition"
                 >
                   Explore Menu
                 </Link>
@@ -231,7 +231,7 @@ export function CartDrawer() {
                 </div>
                 <div className="border-t border-stone-200 dark:border-stone-700 pt-2 flex justify-between text-base font-bold text-stone-900 dark:text-stone-100">
                   <span>Estimated Total</span>
-                  <span className="text-amber-600 dark:text-amber-400">
+                  <span className="text-brand">
                     {formatPaiseToRupees(totalPaise)}
                   </span>
                 </div>
@@ -246,7 +246,7 @@ export function CartDrawer() {
               <Link
                 href="/checkout"
                 onClick={() => setIsCartDrawerOpen(false)}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-[0.98] text-white font-semibold shadow-lg shadow-amber-600/20 transition"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-brand hover:bg-brand-dark active:scale-[0.98] text-white font-semibold shadow-lg shadow-brand/20 transition"
               >
                 <span>Proceed to Checkout</span>
                 <ArrowRight className="w-4 h-4" />

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { createPublicServerClient } from '@/lib/supabase/public';
+import { getPublicSettings } from '@/lib/settings';
 import { MenuCatalog } from '@/components/MenuCatalog';
 import type { Category, MenuItem } from '@/types/database';
 
@@ -14,6 +15,8 @@ export const dynamic = 'force-dynamic';
 export default async function MenuPage() {
   let categories: Category[] = [];
   let items: MenuItem[] = [];
+
+  const settings = await getPublicSettings();
 
   try {
     const supabase = createPublicServerClient();
@@ -50,7 +53,11 @@ export default async function MenuPage() {
       </div>
 
       {/* Menu Catalog */}
-      <MenuCatalog categories={categories} items={items} />
+      <MenuCatalog
+        categories={categories}
+        items={items}
+        isAcceptingOrders={settings.is_accepting_orders}
+      />
     </div>
   );
 }

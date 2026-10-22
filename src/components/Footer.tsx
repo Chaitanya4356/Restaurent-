@@ -3,12 +3,16 @@
 import React from 'react';
 import Link from 'next/link';
 import { MapPin, Phone, Clock, Bike, ShieldCheck, Heart } from 'lucide-react';
+import { formatTimeTo12h, minusMinutesFromTime } from '@/lib/utils';
 
 interface FooterProps {
   restaurantName?: string;
   phone?: string;
   address?: string;
   city?: string;
+  openingTime?: string;
+  closingTime?: string;
+  orderCutoffMinutes?: number;
 }
 
 export function Footer({
@@ -16,7 +20,13 @@ export function Footer({
   phone = '+91 98765 43210',
   address = 'Beach Road, Siripuram, Visakhapatnam, Andhra Pradesh 530003',
   city = 'Visakhapatnam',
+  openingTime = '07:00:00',
+  closingTime = '23:00:00',
+  orderCutoffMinutes = 20,
 }: FooterProps) {
+  const openingLabel = formatTimeTo12h(openingTime);
+  const closingLabel = formatTimeTo12h(closingTime);
+  const cutoffLabel = formatTimeTo12h(minusMinutesFromTime(closingTime, orderCutoffMinutes));
   return (
     <footer className="bg-stone-900 text-stone-300 border-t border-stone-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
@@ -63,10 +73,10 @@ export function Footer({
             <div className="flex items-start gap-2.5 text-sm text-stone-400">
               <Clock className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-stone-200">7:00 AM – 11:00 PM</p>
+                <p className="font-semibold text-stone-200">{openingLabel} – {closingLabel}</p>
                 <p className="text-xs text-stone-400">Every day of the week</p>
                 <p className="text-xs text-amber-400/90 mt-0.5">
-                  Last orders taken at 10:40 PM
+                  Last orders taken at {cutoffLabel}
                 </p>
               </div>
             </div>

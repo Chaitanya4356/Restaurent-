@@ -125,6 +125,7 @@ export async function updateRestaurantSettings(settings: Partial<RestaurantSetti
     revalidatePath('/');
     revalidatePath('/menu');
     revalidatePath('/checkout');
+    revalidatePath('/contact');
     revalidatePath('/admin/settings');
     return { success: true };
   } catch (error) {

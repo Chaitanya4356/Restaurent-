@@ -84,6 +84,14 @@
   - Staff area marked `noindex` / `nofollow` and excluded from the sitemap
   - Login flow returns staff to the originally requested page and validates the `next` parameter against open-redirect abuse
   - 7 new unit tests for the access-control layer (30 Vitest tests passing)
+- [x] **Phase 13 – Live Settings Wiring & CI Hygiene:** Completed
+  - Storefront now loads `restaurant_settings` once in the `(site)` layout and passes live values to the header, footer, cart and pages (no more hardcoded fees, phone, address or hours)
+  - Cart pricing now uses the shared `calculateOrderTotals()` engine with the database delivery fee, free-delivery threshold and minimum order, so the cart can no longer quote a total different from the one the server charges
+  - Owner-configurable brand colour applied through a `--brand` CSS variable (`bg-brand` utilities)
+  - Menu shows an "ordering paused" notice and disables add-to-cart when the emergency switch is off
+  - `contact`, `home` and `footer` contact details, hours and delivery policy all read from the database
+  - Customer pages are rendered per request (`force-dynamic` on the `(site)` layout) so settings changes take effect immediately
+  - Fixed the 3 ESLint errors (`useSyncExternalStore` for the cart store and the store-hours clock, typed form errors) - `npm run lint` now exits 0
 
 ---
 

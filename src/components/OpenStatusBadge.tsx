@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useMemo, useSyncExternalStore } from 'react';
 import { calculateStoreStatus, type StoreStatus } from '@/lib/opening-hours';
 import { Clock } from 'lucide-react';
 
@@ -12,6 +12,28 @@ interface OpenStatusBadgeProps {
   className?: string;
 }
 
+/** How often the badge re-evaluates the clock (30 seconds). */
+const TICK_MS = 30_000;
+
+function subscribeToClock(onTick: () => void) {
+  const interval = setInterval(onTick, TICK_MS);
+  return () => clearInterval(interval);
+}
+
+/**
+ * Snapshot is a plain number that changes once per minute, so it is
+ * referentially stable between renders (required by useSyncExternalStore)
+ * while still forcing a refresh as time passes.
+ */
+function getClockSnapshot(): number {
+  return Math.floor(Date.now() / 60_000);
+}
+
+/** Rendered on the server and during hydration: no status yet. */
+function getServerClockSnapshot(): number {
+  return 0;
+}
+
 export function OpenStatusBadge({
   isAcceptingOrders = true,
   openingTime = '07:00:00',
@@ -19,22 +41,25 @@ export function OpenStatusBadge({
   orderCutoffMinutes = 20,
   className = '',
 }: OpenStatusBadgeProps) {
-  const [status, setStatus] = useState<StoreStatus | null>(null);
+  // The clock is an external store, so no setState-inside-effect is needed.
+  const clockMinute = useSyncExternalStore(
+    subscribeToClock,
+    getClockSnapshot,
+    getServerClockSnapshot
+  );
 
-  useEffect(() => {
-    // Evaluate store status on client mount (safe from SSR prerender constraints)
-    setStatus(
-      calculateStoreStatus(isAcceptingOrders, openingTime, closingTime, orderCutoffMinutes, new Date())
+  const status: StoreStatus | null = useMemo(() => {
+    // 0 means "server snapshot" - render the neutral placeholder.
+    if (clockMinute === 0) return null;
+
+    return calculateStoreStatus(
+      isAcceptingOrders,
+      openingTime,
+      closingTime,
+      orderCutoffMinutes,
+      new Date()
     );
-
-    const interval = setInterval(() => {
-      setStatus(
-        calculateStoreStatus(isAcceptingOrders, openingTime, closingTime, orderCutoffMinutes, new Date())
-      );
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [isAcceptingOrders, openingTime, closingTime, orderCutoffMinutes]);
+  }, [clockMinute, isAcceptingOrders, openingTime, closingTime, orderCutoffMinutes]);
 
   const badgeStyles = {
     open: 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800',
@@ -49,7 +74,7 @@ export function OpenStatusBadge({
   };
 
   if (!status) {
-    // Initial static placeholder before client hydration
+    // Initial static placeholder before the client clock is available.
     return (
       <div
         className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs sm:text-sm font-medium border bg-stone-100 text-stone-600 border-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:border-stone-700 ${className}`}
