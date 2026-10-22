@@ -126,6 +126,26 @@ test.describe('Customer storefront', () => {
     await expect(page).toHaveURL(/\/checkout$/);
   });
 
+  test('customer can set a delivery location on the map', async ({ page }) => {
+    await page.goto('/menu');
+    await addFirstDishToCart(page);
+    await page.goto('/checkout');
+
+    await page.getByRole('button', { name: /Set location on map/i }).click();
+
+    const dialog = page.getByRole('dialog', { name: /Set your delivery location/i });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText(/Chosen point/i)).toBeVisible();
+
+    // Leaflet renders its own container once the dynamic import resolves
+    await expect(dialog.locator('.leaflet-container')).toBeVisible({ timeout: 20000 });
+
+    await dialog.getByRole('button', { name: /Use this location/i }).click();
+
+    // The chosen location is applied to the form
+    await expect(page.getByRole('button', { name: /Remove location/i })).toBeVisible();
+  });
+
   test('empty cart checkout offers a way back to the menu', async ({ page }) => {    await page.goto('/checkout');
 
     await expect(page.getByRole('heading', { name: /Your cart is empty/i })).toBeVisible();

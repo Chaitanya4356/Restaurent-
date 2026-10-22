@@ -138,6 +138,13 @@
   - Reverse geocoding uses OpenStreetMap Nominatim server-side (free, no key) with a graceful fallback to manual entry
   - `supabase/migrations/004_delivery_eta.sql` (+ folded into `RUN_ALL_PENDING.sql`)
   - 16 new unit tests (haversine, ETA maths, coordinate parsing, serviceability precedence) - 69 unit tests passing
+- [x] **Phase 20 – Manual Map Picker for Delivery Location:** Completed
+  - Checkout now offers **two** ways to set the delivery point: "Use my current location" (GPS) and "Set location on map"
+  - New `LocationMapPicker` (Leaflet + OpenStreetMap tiles - no API key, no billing) with a draggable pin, tap-to-place and an area/landmark search
+  - New `GET /api/geo/search` (Nominatim, explicit Find button to respect their no-autocomplete policy, India-biased)
+  - Both paths feed the same `applyCoordinates()` helper: coordinates stored on the form, address + pincode filled in via reverse geocoding, then the shared distance/ETA card
+  - Map is loaded with `next/dynamic` (ssr: false) since Leaflet touches `window`
+  - 1 new E2E test (picker opens, Leaflet renders, confirming applies the location) - 22 E2E passing
 
 ---
 

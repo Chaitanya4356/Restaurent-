@@ -166,17 +166,27 @@ ETA = prep time + (distance ÷ average speed)
 So a customer 10 km away sees roughly `25 + 33 = 58 min` → displayed as
 **~60 min**.
 
-**What customers see:** at checkout they can press **"Use my location"**. Their
-phone shares its position, the site fills in their address automatically, checks
-the distance against your radius, and shows either:
+**What customers see:** at checkout they get **two ways** to set their delivery
+point:
+
+1. **Use my current location** — their phone shares its position; the address and
+   pincode are filled in automatically.
+2. **Set location on map** — an interactive map opens where they can search their
+   area/landmark, then drag the pin to their exact door.
+
+Either way the site measures the distance against your radius and shows:
 
 - ✅ *"You're about 5.2 km away · Estimated delivery ~45 min"*, or
 - ❌ *"You are about 31 km away, outside our 20 km delivery area. You can still
   order for Counter Pickup."*
 
-If a customer doesn't share their location, the **pincode list** is used instead.
-The kitchen dashboard then shows each delivery's **distance, ETA and a Navigate
-link** for the driver.
+If a customer does neither, the **pincode list** is used instead. The kitchen
+dashboard then shows each delivery's **distance, ETA and a Navigate link** for the
+driver.
+
+> The map uses OpenStreetMap tiles (no API key, no cost). Its address search is
+> approximate — customers should drag the pin to their exact door, which is why
+> the pin is draggable and the search result is only a starting point.
 
 > Rule of thumb: the radius is what you *say*, the pincode list is what you
 > *enforce* when the customer won't share a location, and the distance check is

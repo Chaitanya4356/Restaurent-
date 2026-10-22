@@ -17,6 +17,19 @@ import {
   PINCODE_PATTERN,
 } from '@/lib/delivery';
 import { formatEta, roundEtaForDisplay, type Coordinates } from '@/lib/geo';
+import dynamic from 'next/dynamic';
+
+// Leaflet touches `window`, so the map picker is loaded on demand, client-only.
+const LocationMapPicker = dynamic(() => import('@/components/LocationMapPicker'), {
+  ssr: false,
+  loading: () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+      <div className="bg-white dark:bg-stone-900 rounded-2xl px-6 py-4 text-sm font-semibold text-stone-600 dark:text-stone-300">
+        Loading map…
+      </div>
+    </div>
+  ),
+});
 import { formatPaiseToRupees } from '@/lib/utils';
 import Link from 'next/link';
 import {
@@ -104,6 +117,39 @@ export function CheckoutClient({ deliveryConfig }: { deliveryConfig: CheckoutDel
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [locationUsed, setLocationUsed] = useState(false);
+  const [isMapOpen, setIsMapOpen] = useState(false);
+
+  /**
+   * Applies a set of coordinates: stores them on the form, fills in the address
+   * and pincode (best effort) and flips the UI into "location set" mode.
+   * Shared by the GPS button and the map picker.
+   */
+  const applyCoordinates = async (coords: Coordinates) => {
+    const latitude = Number(coords.latitude.toFixed(6));
+    const longitude = Number(coords.longitude.toFixed(6));
+
+    setValue('deliveryLatitude', latitude);
+    setValue('deliveryLongitude', longitude);
+    setLocationUsed(true);
+    setLocationError(null);
+
+    try {
+      const res = await fetch(`/api/geo/reverse?lat=${latitude}&lng=${longitude}`, {
+        cache: 'no-store',
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { address: string | null; postcode: string | null };
+        if (data.address && !watchedAddress.trim()) {
+          setValue('deliveryAddress', data.address.slice(0, 300));
+        }
+        if (data.postcode) {
+          setValue('deliveryPincode', data.postcode);
+        }
+      }
+    } catch {
+      // Address lookup is a convenience - the customer can type it.
+    }
+  };
 
   const sharedCoordinates: Coordinates | null =
     typeof watchedLat === 'number' && typeof watchedLng === 'number'
@@ -152,31 +198,10 @@ export function CheckoutClient({ deliveryConfig }: { deliveryConfig: CheckoutDel
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        const latitude = Number(position.coords.latitude.toFixed(6));
-        const longitude = Number(position.coords.longitude.toFixed(6));
-
-        setValue('deliveryLatitude', latitude);
-        setValue('deliveryLongitude', longitude);
-        setLocationUsed(true);
-
-        // Prefill the address + pincode from the coordinates (best effort).
-        try {
-          const res = await fetch(`/api/geo/reverse?lat=${latitude}&lng=${longitude}`, {
-            cache: 'no-store',
-          });
-          if (res.ok) {
-            const data = (await res.json()) as { address: string | null; postcode: string | null };
-            if (data.address && !watchedAddress.trim()) {
-              setValue('deliveryAddress', data.address.slice(0, 300));
-            }
-            if (data.postcode) {
-              setValue('deliveryPincode', data.postcode);
-            }
-          }
-        } catch {
-          // Address lookup is a convenience - the customer can type it.
-        }
-
+        await applyCoordinates({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
         setIsLocating(false);
       },
       (error) => {
@@ -281,6 +306,17 @@ export function CheckoutClient({ deliveryConfig }: { deliveryConfig: CheckoutDel
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-16">
+      {isMapOpen && (
+        <LocationMapPicker
+          initial={sharedCoordinates ?? outlet}
+          onConfirm={async (coords) => {
+            setIsMapOpen(false);
+            await applyCoordinates(coords);
+          }}
+          onClose={() => setIsMapOpen(false)}
+        />
+      )}
+
       {/* Page Title & Back Link */}
       <div className="flex items-center justify-between border-b border-stone-200 dark:border-stone-800 pb-4">
         <Link
@@ -461,9 +497,18 @@ export function CheckoutClient({ deliveryConfig }: { deliveryConfig: CheckoutDel
                     ) : (
                       <>
                         <Navigation className="w-3.5 h-3.5" />
-                        <span>{locationUsed ? 'Update my location' : 'Use my location'}</span>
+                        <span>{locationUsed ? 'Update my location' : 'Use my current location'}</span>
                       </>
                     )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsMapOpen(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-200 font-bold text-xs transition"
+                  >
+                    <MapPin className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Set location on map</span>
                   </button>
 
                   {locationUsed && (
