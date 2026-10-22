@@ -101,6 +101,27 @@ export async function deleteMenuItem(itemId: string) {
 }
 
 /**
+ * Settings that exist on every version of the schema. Used as a fallback when a
+ * newer column is missing, so the owner can always save the rest.
+ */
+const CORE_SETTINGS_FIELDS = [
+  'restaurant_name',
+  'phone_number',
+  'address',
+  'city',
+  'time_zone',
+  'opening_time',
+  'closing_time',
+  'order_cutoff_minutes',
+  'is_accepting_orders',
+  'delivery_fee_paise',
+  'free_delivery_threshold_paise',
+  'min_delivery_order_paise',
+  'brand_color_primary',
+  'brand_logo_url',
+] as const;
+
+/**
  * Updates restaurant settings (operating hours, accepting orders switch, delivery fee, etc.).
  */
 export async function updateRestaurantSettings(settings: Partial<RestaurantSettings>) {
@@ -120,21 +141,23 @@ export async function updateRestaurantSettings(settings: Partial<RestaurantSetti
       .eq('id', 1);
 
     if (error) {
-      // Graceful pre-migration fallback: the UPI columns are added by
-      // supabase/migrations/001_upi_payment_settings.sql. Until that has been
-      // run, still save every other setting instead of failing the whole form.
-      const mentionsUpiColumn = /upi_(id|phone|qr_url|payee_name)/.test(error.message);
+      // Graceful pre-migration fallback: newer columns (UPI, delivery radius,
+      // outlet location, ETA timings) are added by supabase/migrations/*.sql.
+      // Until those have been run, still save every core setting instead of
+      // failing the whole form.
+      const missingColumn = /schema cache|does not exist/i.test(error.message);
 
-      if (mentionsUpiColumn) {
-        const rest: typeof payload = { ...payload };
-        delete rest.upi_id;
-        delete rest.upi_phone;
-        delete rest.upi_qr_url;
-        delete rest.upi_payee_name;
+      if (missingColumn) {
+        const corePayload: Record<string, unknown> = { updated_at: payload.updated_at };
+        for (const field of CORE_SETTINGS_FIELDS) {
+          if (field in payload) {
+            corePayload[field] = (payload as Record<string, unknown>)[field];
+          }
+        }
 
         const { error: retryError } = await supabase
           .from('restaurant_settings')
-          .update(rest)
+          .update(corePayload)
           .eq('id', 1);
 
         if (!retryError) {
@@ -146,8 +169,8 @@ export async function updateRestaurantSettings(settings: Partial<RestaurantSetti
           return {
             success: false,
             error:
-              'All other settings were saved, but the UPI fields need a one-time database update. ' +
-              'Run supabase/migrations/001_upi_payment_settings.sql in the Supabase SQL editor, then save again.',
+              'Your other settings were saved, but the newer fields (UPI, delivery radius, restaurant location, ETA timings) need a one-time database update. ' +
+              'Open Supabase → SQL Editor and run supabase/migrations/RUN_ALL_PENDING.sql, then save again.',
           };
         }
       }
