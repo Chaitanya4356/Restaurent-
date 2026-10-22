@@ -56,6 +56,7 @@ export default async function AdminSettingsPage() {
     <AdminSettingsManager
       initialSettings={initialSettings}
       initialPincodes={(pincodes || []) as DeliveryPincode[]}
+      pincodesReady={!pincodeError}
     />
   );
 }

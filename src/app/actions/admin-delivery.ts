@@ -37,11 +37,11 @@ export async function addDeliveryPincode(input: { pincode: string; areaName?: st
     );
 
     if (error) {
-      if (/does not exist/i.test(error.message)) {
+      if (/does not exist|schema cache|could not find the table/i.test(error.message)) {
         return {
           success: false,
           error:
-            'The delivery pincodes table is missing. Run supabase/migrations/002_delivery_pincodes.sql in the Supabase SQL editor first.',
+            'The delivery pincodes table does not exist yet. Open Supabase → SQL Editor and run supabase/migrations/RUN_ALL_PENDING.sql, then try again.',
         };
       }
       return { success: false, error: error.message };

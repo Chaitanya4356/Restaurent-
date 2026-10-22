@@ -25,11 +25,14 @@ import {
 interface AdminSettingsManagerProps {
   initialSettings: RestaurantSettings;
   initialPincodes?: DeliveryPincode[];
+  /** false when the delivery_pincodes table has not been created yet. */
+  pincodesReady?: boolean;
 }
 
 export function AdminSettingsManager({
   initialSettings,
   initialPincodes = [],
+  pincodesReady = true,
 }: AdminSettingsManagerProps) {
   const [settings, setSettings] = useState<RestaurantSettings>(initialSettings);
   const [isAcceptingOrders, setIsAcceptingOrders] = useState(initialSettings.is_accepting_orders);
@@ -348,7 +351,13 @@ export function AdminSettingsManager({
               delivery order - they are offered Counter Pickup instead. Pickup orders are never
               restricted.
             </p>
-            {pincodes.length === 0 ? (
+            {!pincodesReady ? (
+              <p className="mt-2 p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200 text-[11px] font-semibold">
+                ⚠️ <strong>Database setup required.</strong> Open Supabase → SQL Editor and run{' '}
+                <code className="font-mono">supabase/migrations/RUN_ALL_PENDING.sql</code> once. Until
+                then pincodes cannot be saved (delivery stays open to every address).
+              </p>
+            ) : pincodes.length === 0 ? (
               <p className="mt-2 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-[11px] font-semibold">
                 ⚠️ No pincodes configured yet - delivery is currently open to <strong>every</strong>{' '}
                 address. Add your serviceable pincodes below to restrict it.
