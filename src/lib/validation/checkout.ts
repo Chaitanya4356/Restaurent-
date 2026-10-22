@@ -1,7 +1,12 @@
 import { z } from 'zod';
 
 export const checkoutItemSchema = z.object({
-  menuItemId: z.string().uuid('Invalid menu item ID'),
+  // NOTE: `z.guid()` (not `z.string().uuid()`) matches what Postgres accepts
+  // for a `uuid` column - any 8-4-4-4-12 hex string. Zod v4's `.uuid()` also
+  // enforces RFC-4122 version/variant bits, which rejected the restaurant's
+  // seeded menu item ids (e.g. a1111111-1111-1111-1111-111111111111) and
+  // silently blocked every checkout that contained them.
+  menuItemId: z.guid('Invalid menu item ID'),
   quantity: z.number().int().min(1, 'Quantity must be at least 1').max(20, 'Maximum 20 per item'),
   notes: z.string().max(200, 'Notes cannot exceed 200 characters').optional().default(''),
 });
