@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import type { Category, MenuItem } from '@/types/database';
 import { toggleSoldOut, upsertMenuItem, deleteMenuItem } from '@/app/actions/admin-menu';
+import { DishImage } from '@/components/DishImage';
 import { formatPaiseToRupees } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -81,18 +82,41 @@ export function AdminMenuManager({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Validate before spending an upload request.
+    if (!file.type.startsWith('image/')) {
+      alert('Please choose an image file (JPG, PNG, WebP).');
+      e.target.value = '';
+      return;
+    }
+
+    const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+    if (file.size > MAX_BYTES) {
+      alert('Photo is too large. Please use an image under 5 MB.');
+      e.target.value = '';
+      return;
+    }
+
     setIsUploadingPhoto(true);
     try {
       const supabase = createClient();
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `dish-photos/${fileName}`;
+      const fileExt = (file.name.split('.').pop() || 'jpg')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '');
+      const uniqueId =
+        typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID().slice(0, 8)
+          : Math.random().toString(36).substring(2, 10);
+
+      // The bucket already scopes objects to dish-photos - do NOT prefix the
+      // path with the bucket name again (that created a nested folder).
+      const filePath = `${Date.now()}-${uniqueId}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('dish-photos')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: true,
+          upsert: false,
+          contentType: file.type,
         });
 
       if (uploadError) {
@@ -106,9 +130,11 @@ export function AdminMenuManager({
         setImageUrl(data.publicUrl);
       }
     } catch (err) {
-      alert('Error uploading file');
+      console.error('Photo upload error:', err);
+      alert('Error uploading photo. Please try again.');
     } finally {
       setIsUploadingPhoto(false);
+      e.target.value = '';
     }
   };
 
@@ -213,6 +239,14 @@ export function AdminMenuManager({
                   }`}
                 >
                   <div>
+                    <DishImage
+                      src={dish.image_url}
+                      alt={dish.name}
+                      sizes="(min-width: 1024px) 30vw, (min-width: 768px) 45vw, 100vw"
+                      className={`w-full aspect-[16/9] rounded-lg mb-2 ${
+                        dish.is_sold_out ? 'grayscale' : ''
+                      }`}
+                    />
                     <div className="flex items-center justify-between mb-2">
                       <span
                         className={`w-3.5 h-3.5 rounded-xs flex items-center justify-center border text-[9px] font-bold ${
@@ -398,21 +432,37 @@ export function AdminMenuManager({
               {/* Photo Upload to Supabase Storage */}
               <div className="space-y-1">
                 <label className="block text-xs font-bold text-stone-700 dark:text-stone-300">
-                  Dish Photo (Upload to dish-photos bucket)
+                  Dish Photo (uploaded to the dish-photos bucket)
                 </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                    className="text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100"
+                <div className="flex items-center gap-3">
+                  <DishImage
+                    src={imageUrl || null}
+                    alt={name || 'Dish photo preview'}
+                    sizes="64px"
+                    className="w-16 h-16 rounded-lg shrink-0 border border-stone-200 dark:border-stone-700"
                   />
-                  {isUploadingPhoto && <Loader2 className="w-4 h-4 animate-spin text-amber-600" />}
+                  <div className="flex-1 space-y-1">
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/avif"
+                      onChange={handlePhotoUpload}
+                      disabled={isUploadingPhoto}
+                      className="w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 disabled:opacity-50"
+                    />
+                    <p className="text-[10px] text-stone-500">
+                      JPG, PNG, WebP or AVIF - max 5 MB. Leave empty to use the placeholder.
+                    </p>
+                  </div>
+                  {isUploadingPhoto && <Loader2 className="w-4 h-4 animate-spin text-amber-600 shrink-0" />}
                 </div>
                 {imageUrl && (
-                  <p className="text-[10px] text-emerald-600 truncate mt-1">
-                    ✓ Photo attached: {imageUrl}
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setImageUrl('')}
+                    className="text-[10px] font-semibold text-rose-600 hover:underline"
+                  >
+                    Remove photo
+                  </button>
                 )}
               </div>
 

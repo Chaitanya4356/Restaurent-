@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import type { Category, MenuItem } from '@/types/database';
 import { useCart } from '@/context/CartContext';
+import { DishImage } from '@/components/DishImage';
 import { formatPaiseToRupees } from '@/lib/utils';
 import { Search, Plus, Minus, Check, ShoppingBag, ArrowRight, Ban, Utensils } from 'lucide-react';
 
@@ -225,6 +226,15 @@ export function MenuCatalog({
                     }`}
                   >
                     <div>
+                      <DishImage
+                        src={dish.image_url}
+                        alt={dish.name}
+                        sizes="(min-width: 768px) 45vw, 100vw"
+                        className={`w-full aspect-[16/10] rounded-xl mb-3 ${
+                          dish.is_sold_out ? 'grayscale' : ''
+                        }`}
+                      />
+
                       {/* Dietary indicator & Sold-out tag */}
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-1.5">

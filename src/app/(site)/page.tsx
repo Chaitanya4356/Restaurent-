@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { OpenStatusBadge } from '@/components/OpenStatusBadge';
+import { DishImage } from '@/components/DishImage';
 import {
   UtensilsCrossed,
   Bike,
@@ -26,7 +27,7 @@ export default async function HomePage() {
   const cutoffLabel = formatTimeTo12h(
     minusMinutesFromTime(settings.closing_time, settings.order_cutoff_minutes)
   );
-  // Fetch sample featured dishes from Supabase
+  // Fetch a representative spread of featured dishes from Supabase
   let featuredDishes: MenuItem[] = [];
   try {
     const supabase = createPublicServerClient();
@@ -34,8 +35,28 @@ export default async function HomePage() {
       .from('menu_items')
       .select('*')
       .eq('is_active', true)
-      .limit(4);
-    if (data) featuredDishes = data;
+      .order('display_order', { ascending: true });
+
+    if (data) {
+      // Show a spread across categories (one per category, then a second
+      // round) instead of whichever four rows the database happens to return.
+      const byCategory = new Map<string, MenuItem[]>();
+      for (const item of data as MenuItem[]) {
+        const list = byCategory.get(item.category_id) ?? [];
+        list.push(item);
+        byCategory.set(item.category_id, list);
+      }
+
+      const spread: MenuItem[] = [];
+      for (let round = 0; round < 2 && spread.length < 4; round += 1) {
+        for (const list of byCategory.values()) {
+          const candidate = list[round];
+          if (candidate && spread.length < 4) spread.push(candidate);
+        }
+      }
+
+      featuredDishes = spread;
+    }
   } catch (e) {
     console.error('Failed to fetch featured dishes:', e);
   }
@@ -174,6 +195,12 @@ export default async function HomePage() {
                 className="p-4 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 hover:border-amber-300 dark:hover:border-amber-700 transition shadow-xs flex flex-col justify-between"
               >
                 <div>
+                  <DishImage
+                    src={dish.image_url}
+                    alt={dish.name}
+                    sizes="(min-width: 1024px) 22vw, (min-width: 640px) 45vw, 100vw"
+                    className="w-full aspect-[4/3] rounded-xl mb-3"
+                  />
                   <div className="flex items-center justify-between mb-2">
                     <span
                       className={`w-3.5 h-3.5 rounded-xs flex items-center justify-center border text-[9px] font-bold ${

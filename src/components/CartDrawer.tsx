@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useCart } from '@/context/CartContext';
+import { DishImage } from '@/components/DishImage';
 import { formatPaiseToRupees } from '@/lib/utils';
 import { X, Plus, Minus, Trash2, ShoppingBag, ArrowRight, Sparkles } from 'lucide-react';
 import Link from 'next/link';
@@ -129,6 +130,12 @@ export function CartDrawer() {
                   className="p-3 rounded-xl border border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-800/40 flex flex-col gap-2"
                 >
                   <div className="flex items-start justify-between gap-3">
+                    <DishImage
+                      src={cartItem.item.image_url}
+                      alt={cartItem.item.name}
+                      sizes="44px"
+                      className="w-11 h-11 rounded-lg shrink-0"
+                    />
                     <div className="flex-1">
                       <div className="flex items-center gap-1.5">
                         <span

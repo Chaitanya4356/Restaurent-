@@ -92,6 +92,13 @@
   - `contact`, `home` and `footer` contact details, hours and delivery policy all read from the database
   - Customer pages are rendered per request (`force-dynamic` on the `(site)` layout) so settings changes take effect immediately
   - Fixed the 3 ESLint errors (`useSyncExternalStore` for the cart store and the store-hours clock, typed form errors) - `npm run lint` now exits 0
+- [x] **Phase 14 – Dish Photos:** Completed
+  - `DishImage` component: optimised `next/image` rendering with a branded placeholder when no photo exists or the URL breaks
+  - Photos now appear on the menu cards, the home page featured dishes, the cart drawer line items and the staff menu manager
+  - Fixed the storage upload path (files were being written to a nested `dish-photos/dish-photos/` folder)
+  - Upload validation: image MIME type check, 5 MB limit, unique collision-safe filenames, inline preview and remove-photo action
+  - `next.config.ts` now allows Supabase Storage through `images.remotePatterns`
+  - Featured dishes on the home page are chosen as a deterministic spread across categories instead of arbitrary rows
 
 ---
 

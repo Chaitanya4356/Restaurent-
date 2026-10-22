@@ -59,13 +59,28 @@ When a customer places an order:
    - `Out for Delivery` / `Ready for Pickup` $\rightarrow$ Food packed, delivery agent departs or bag placed on pickup counter.
    - `Complete Order` $\rightarrow$ Food handed over; order moves to completed archive.
 
-### 3. Managing Sold Out Dishes (Rush Hours)
-If an item sells out during peak hours:
+### 3. Managing Sold Out Dishes (Rush Hours)If an item sells out during peak hours:
 1. Navigate to **Menu Management** (`/admin/menu`).
 2. Find the dish (e.g., *Josh Special Chicken Biryani*).
 3. Toggle the switch to **Sold Out**.
 4. The dish immediately displays a red **"Sold Out"** badge on the public menu and the "Add to Order" button is instantly disabled.
 5. When a fresh batch is prepared, toggle it back to **Available**.
+
+---
+
+## 📸 Adding Dish Photos
+
+1. Open **Menu Manager** (`/admin/menu`) and click the pencil icon on a dish.
+2. Under **Dish Photo**, choose a photo from your phone or computer:
+   - JPG, PNG, WebP or AVIF
+   - **Maximum 5 MB** (photos straight from a phone camera are usually fine; if the upload is rejected, resize first)
+3. The thumbnail preview confirms the upload, then press **Save Dish**.
+4. The photo appears on the public menu, the home page's featured dishes, and the cart.
+
+> Photos are stored in the Supabase `dish-photos` bucket and served through the
+> website's image optimiser, so a 3 MB photo still loads quickly on a phone.
+> Dishes without a photo show a neutral placeholder - the menu never shows a
+> broken image.
 
 ---
 
