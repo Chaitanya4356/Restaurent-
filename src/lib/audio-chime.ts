@@ -40,6 +40,15 @@ export function playOrderChime() {
 
     osc2.start(ctx.currentTime + 0.15);
     osc2.stop(ctx.currentTime + 1.2);
+
+    // Release the context once the chime has finished. Browsers cap the number
+    // of live AudioContexts (~6), after which new ones fail silently and the
+    // kitchen would stop hearing new-order alerts mid-shift.
+    window.setTimeout(() => {
+      ctx.close().catch(() => {
+        /* already closed - nothing to do */
+      });
+    }, 1500);
   } catch (e) {
     console.warn('Audio chime playback blocked or not supported:', e);
   }
