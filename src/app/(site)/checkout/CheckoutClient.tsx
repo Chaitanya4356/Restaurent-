@@ -559,6 +559,30 @@ export function CheckoutClient({ deliveryConfig }: { deliveryConfig: CheckoutDel
                     </span>
                   </div>
                 )}
+
+                {/* Location shared, but the kitchen has no coordinates configured yet,
+                    so no distance can be measured. Still confirm what happened. */}
+                {locationUsed && serviceability.decidedBy !== 'distance' && (
+                  <div
+                    role="status"
+                    className={`p-3 rounded-xl border text-[11px] font-semibold flex items-start gap-2 ${
+                      deliveryAllowed
+                        ? 'bg-stone-50 dark:bg-stone-800/60 border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-200'
+                        : 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200'
+                    }`}
+                  >
+                    {deliveryAllowed ? (
+                      <MapPin className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    )}
+                    <span>
+                      {deliveryAllowed
+                        ? 'Location saved — your address and pincode were filled in from it.'
+                        : serviceability.message}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Pincode - gates our delivery service area */}              <div className="space-y-1 max-w-[12rem]">
