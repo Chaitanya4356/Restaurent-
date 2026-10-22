@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import type { Order, OrderItem, OrderStatus } from '@/types/database';
 import { formatPaiseToRupees } from '@/lib/utils';
+import { formatEta, roundEtaForDisplay } from '@/lib/geo';
 import Link from 'next/link';
 import {
   CheckCircle2,
@@ -290,9 +291,25 @@ export function OrderLiveTracker({
             <span>Estimated Timing:</span>
           </div>
           <span className="font-bold text-stone-900 dark:text-stone-100">
-            {order.preferred_time === 'ASAP' ? '25 – 40 minutes' : order.preferred_time}
+            {order.estimated_delivery_minutes
+              ? formatEta(roundEtaForDisplay(order.estimated_delivery_minutes))
+              : order.preferred_time === 'ASAP'
+              ? '25 – 40 minutes'
+              : order.preferred_time}
           </span>
         </div>
+
+        {order.delivery_distance_km != null && (
+          <div className="bg-stone-50 dark:bg-stone-800/50 p-3 rounded-xl flex items-center justify-between text-xs text-stone-600 dark:text-stone-300">
+            <div className="flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-amber-600" />
+              <span>Distance from our kitchen:</span>
+            </div>
+            <span className="font-bold text-stone-900 dark:text-stone-100">
+              {Number(order.delivery_distance_km).toFixed(1)} km
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Itemized Order Snapshot Receipt */}

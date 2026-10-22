@@ -46,6 +46,11 @@ export interface Order {
   delivery_address: string | null;
   /** Pincode captured at checkout (delivery orders only). */
   delivery_pincode?: string | null;
+  /** Customer coordinates from "Use my location", when shared. */
+  delivery_latitude?: number | null;
+  delivery_longitude?: number | null;
+  delivery_distance_km?: number | null;
+  estimated_delivery_minutes?: number | null;
   preferred_time: string;
   customer_notes: string | null;
   subtotal_paise: number;
@@ -85,6 +90,13 @@ export interface RestaurantSettings {
   min_delivery_order_paise: number;
   /** Advertised delivery radius in km (owner-configurable). */
   delivery_radius_km?: number;
+  /** Outlet coordinates - enable distance-based gating and ETA. */
+  outlet_latitude?: number | null;
+  outlet_longitude?: number | null;
+  /** Kitchen prep time (minutes) used in the delivery ETA. */
+  prep_time_minutes?: number;
+  /** Average city speed (km/h) used in the delivery ETA. */
+  avg_speed_kmh?: number;
   brand_color_primary: string;
   brand_logo_url: string | null;
   /** UPI collection details - owner-configurable, shown to online-payment customers. */

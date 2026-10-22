@@ -5,6 +5,7 @@ import Image from 'next/image';
 import type { RestaurantSettings, DeliveryPincode } from '@/types/database';
 import { updateRestaurantSettings } from '@/app/actions/admin-menu';
 import { addDeliveryPincode, removeDeliveryPincode } from '@/app/actions/admin-delivery';
+import { parseCoordinates } from '@/lib/geo';
 import { uploadPublicImage } from '@/lib/storage';
 import {
   Settings,
@@ -51,6 +52,22 @@ export function AdminSettingsManager({
   const [deliveryRadiusKm, setDeliveryRadiusKm] = useState(
     (initialSettings.delivery_radius_km ?? 20).toString()
   );
+  const [prepTimeMinutes, setPrepTimeMinutes] = useState(
+    (initialSettings.prep_time_minutes ?? 25).toString()
+  );
+  const [avgSpeedKmh, setAvgSpeedKmh] = useState(
+    (initialSettings.avg_speed_kmh ?? 18).toString()
+  );
+
+  // Restaurant location (drives distance gating + delivery ETA)
+  const [outletLat, setOutletLat] = useState<number | null>(
+    initialSettings.outlet_latitude ?? null
+  );
+  const [outletLng, setOutletLng] = useState<number | null>(
+    initialSettings.outlet_longitude ?? null
+  );
+  const [outletInput, setOutletInput] = useState('');
+  const [outletMessage, setOutletMessage] = useState<string | null>(null);
   const [phone, setPhone] = useState(initialSettings.phone_number);
   const [address, setAddress] = useState(initialSettings.address);
   const [brandColor, setBrandColor] = useState(initialSettings.brand_color_primary);
@@ -132,6 +149,22 @@ export function AdminSettingsManager({
     }
   };
 
+  const applyOutletInput = () => {
+    const parsed = parseCoordinates(outletInput);
+
+    if (!parsed) {
+      setOutletMessage(
+        'Could not read coordinates. Paste a Google Maps link that contains @lat,lng (open the place, then copy the URL), or type them as 17.7231, 83.3012.'
+      );
+      return;
+    }
+
+    setOutletLat(Number(parsed.latitude.toFixed(6)));
+    setOutletLng(Number(parsed.longitude.toFixed(6)));
+    setOutletMessage(`Location set to ${parsed.latitude.toFixed(5)}, ${parsed.longitude.toFixed(5)}. Press Save to apply.`);
+    setOutletInput('');
+  };
+
   const handleSave = async (e: React.FormEvent) => {    e.preventDefault();
     setIsSaving(true);
     setSavedSuccess(false);
@@ -145,6 +178,10 @@ export function AdminSettingsManager({
       free_delivery_threshold_paise: Math.round(parseFloat(freeDeliveryThresholdRupees) * 100),
       min_delivery_order_paise: Math.round(parseFloat(minDeliveryOrderRupees) * 100),
       delivery_radius_km: Math.min(100, Math.max(1, parseInt(deliveryRadiusKm, 10) || 20)),
+      prep_time_minutes: Math.min(240, Math.max(0, parseInt(prepTimeMinutes, 10) || 25)),
+      avg_speed_kmh: Math.min(120, Math.max(1, parseInt(avgSpeedKmh, 10) || 18)),
+      outlet_latitude: outletLat,
+      outlet_longitude: outletLng,
       phone_number: phone.trim(),
       address: address.trim(),
       brand_color_primary: brandColor.trim(),
@@ -333,8 +370,100 @@ export function AdminSettingsManager({
               />
               <p className="text-[10px] text-stone-500">
                 Shown to customers across the site. Actual delivery eligibility is decided by the
-                pincode list below.
+                distance below (or the pincode list).
               </p>
+            </div>
+          </div>
+
+          {/* Location + timing: powers distance gating and the delivery ETA */}
+          <div className="pt-2 border-t border-stone-100 dark:border-stone-800 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-stone-700 dark:text-stone-300">
+                  Kitchen Prep Time (minutes)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="240"
+                  value={prepTimeMinutes}
+                  onChange={(e) => setPrepTimeMinutes(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-sm focus:outline-hidden"
+                />
+                <p className="text-[10px] text-stone-500">
+                  Time to cook &amp; pack a typical order, added to every delivery ETA.
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-stone-700 dark:text-stone-300">
+                  Average Delivery Speed (km/h)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="120"
+                  value={avgSpeedKmh}
+                  onChange={(e) => setAvgSpeedKmh(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-sm focus:outline-hidden"
+                />
+                <p className="text-[10px] text-stone-500">
+                  Used to turn distance into time. 18 km/h suits city traffic.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-stone-700 dark:text-stone-300">
+                Restaurant Location (enables distance &amp; ETA)
+              </label>
+
+              {outletLat !== null && outletLng !== null ? (
+                <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold">
+                  ✓ {outletLat}, {outletLng} ·{' '}
+                  <a
+                    href={`https://www.google.com/maps?q=${outletLat},${outletLng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                  >
+                    view on map
+                  </a>
+                </p>
+              ) : (
+                <p className="text-[11px] text-amber-700 dark:text-amber-300 font-semibold">
+                  ⚠️ Not set — customers can&apos;t use &quot;Use my location&quot; distance checks and no
+                  delivery ETA is shown. The pincode list is used instead.
+                </p>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="text"
+                  value={outletInput}
+                  onChange={(e) => setOutletInput(e.target.value)}
+                  placeholder="Paste your Google Maps link, or 17.7231, 83.3012"
+                  className="flex-1 px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-sm focus:outline-hidden"
+                />
+                <button
+                  type="button"
+                  onClick={applyOutletInput}
+                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition"
+                >
+                  Set Location
+                </button>
+              </div>
+
+              <p className="text-[10px] text-stone-500">
+                On Google Maps, right-click your restaurant → click the coordinates to copy them, then
+                paste here. Press <strong>Save</strong> afterwards.
+              </p>
+
+              {outletMessage && (
+                <p className="text-[11px] font-semibold text-stone-600 dark:text-stone-300">
+                  {outletMessage}
+                </p>
+              )}
             </div>
           </div>
         </div>

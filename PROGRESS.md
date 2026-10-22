@@ -128,6 +128,16 @@
   - `supabase/migrations/002_delivery_pincodes.sql`, `003_delivery_radius.sql` and a combined `RUN_ALL_PENDING.sql` (all idempotent)
   - Orders insert falls back automatically if `orders.delivery_pincode` is missing, so the feature can ship before the migration without blocking checkouts
   - 6 new unit tests (serviceability + pincode validation) and 1 new E2E test - 48 unit + 21 E2E passing
+- [x] **Phase 19 – "Use My Location" Distance Gating & Delivery ETA:** Completed
+  - Checkout gains a **Use my location** button: the customer's device shares its coordinates, the address (and pincode) are filled in automatically via reverse geocoding, and the site shows the real distance from the kitchen
+  - Distance-based serviceability: inside the radius -> accepted with an estimated delivery time; outside -> rejected with a friendly message and a Counter Pickup suggestion
+  - ETA = kitchen prep time + (distance / average speed), both owner-configurable, shown to the customer and stored on the order
+  - Kitchen dashboard shows distance, ETA and a **Navigate** link (Google Maps) for the driver
+  - `checkDeliveryServiceability()` is shared by the browser and the server, so the customer is never told one thing and given another; pincodes remain the fallback when no location is shared
+  - Outlet location is set by pasting a Google Maps link or coordinates (`parseCoordinates`); no API key needed
+  - Reverse geocoding uses OpenStreetMap Nominatim server-side (free, no key) with a graceful fallback to manual entry
+  - `supabase/migrations/004_delivery_eta.sql` (+ folded into `RUN_ALL_PENDING.sql`)
+  - 16 new unit tests (haversine, ETA maths, coordinate parsing, serviceability precedence) - 69 unit tests passing
 
 ---
 

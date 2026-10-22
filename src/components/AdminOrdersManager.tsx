@@ -19,6 +19,7 @@ import {
   PackageCheck,
   RefreshCw,
   BellRing,
+  Navigation,
 } from 'lucide-react';
 
 export interface OrderWithItems extends Order {
@@ -321,6 +322,33 @@ export function AdminOrdersManager({ initialOrders }: AdminOrdersManagerProps) {
                       <p className="text-stone-500 text-[11px] pt-0.5 leading-relaxed">
                         📍 {order.delivery_address}
                       </p>
+                    )}
+
+                    {/* Distance / ETA / navigation for the driver */}
+                    {(order.delivery_distance_km != null || order.delivery_latitude != null) && (
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        {order.delivery_distance_km != null && (
+                          <span className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 text-[10px] font-bold">
+                            {Number(order.delivery_distance_km).toFixed(1)} km
+                          </span>
+                        )}
+                        {order.estimated_delivery_minutes != null && (
+                          <span className="px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-[10px] font-bold">
+                            ETA {order.estimated_delivery_minutes} min
+                          </span>
+                        )}
+                        {order.delivery_latitude != null && order.delivery_longitude != null && (
+                          <a
+                            href={`https://www.google.com/maps?q=${order.delivery_latitude},${order.delivery_longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-200 text-[10px] font-bold hover:border-amber-500 transition"
+                          >
+                            <Navigation className="w-3 h-3 text-amber-600" />
+                            <span>Navigate</span>
+                          </a>
+                        )}
+                      </div>
                     )}
                   </div>
 

@@ -47,6 +47,11 @@ CREATE TABLE IF NOT EXISTS public.restaurant_settings (
     free_delivery_threshold_paise INTEGER NOT NULL DEFAULT 50000, -- Free above ₹500.00
     min_delivery_order_paise INTEGER NOT NULL DEFAULT 10000,    -- ₹100.00 minimum
     delivery_radius_km INTEGER NOT NULL DEFAULT 20 CHECK (delivery_radius_km >= 1 AND delivery_radius_km <= 100),
+    -- Outlet location + ETA estimation (see migrations/004_delivery_eta.sql)
+    outlet_latitude NUMERIC(9,6),
+    outlet_longitude NUMERIC(9,6),
+    prep_time_minutes INTEGER NOT NULL DEFAULT 25 CHECK (prep_time_minutes >= 0 AND prep_time_minutes <= 240),
+    avg_speed_kmh INTEGER NOT NULL DEFAULT 18 CHECK (avg_speed_kmh >= 1 AND avg_speed_kmh <= 120),
     brand_color_primary TEXT NOT NULL DEFAULT '#E65100',
     brand_logo_url TEXT,
     -- Owner-configurable UPI collection details (shown to customers who
@@ -68,6 +73,10 @@ CREATE TABLE IF NOT EXISTS public.orders (
     customer_phone TEXT NOT NULL,
     delivery_address TEXT,
     delivery_pincode TEXT,
+    delivery_latitude NUMERIC(9,6),
+    delivery_longitude NUMERIC(9,6),
+    delivery_distance_km NUMERIC(5,2),
+    estimated_delivery_minutes INTEGER,
     preferred_time TEXT NOT NULL DEFAULT 'ASAP',
     customer_notes TEXT,
     subtotal_paise INTEGER NOT NULL CHECK (subtotal_paise >= 0),
@@ -253,6 +262,19 @@ ALTER TABLE public.orders
 -- Owner-configurable delivery radius (see migrations/003_delivery_radius.sql)
 ALTER TABLE public.restaurant_settings
     ADD COLUMN IF NOT EXISTS delivery_radius_km INTEGER NOT NULL DEFAULT 20;
+
+-- Outlet location + ETA estimation (see migrations/004_delivery_eta.sql)
+ALTER TABLE public.restaurant_settings
+    ADD COLUMN IF NOT EXISTS outlet_latitude NUMERIC(9,6),
+    ADD COLUMN IF NOT EXISTS outlet_longitude NUMERIC(9,6),
+    ADD COLUMN IF NOT EXISTS prep_time_minutes INTEGER NOT NULL DEFAULT 25,
+    ADD COLUMN IF NOT EXISTS avg_speed_kmh INTEGER NOT NULL DEFAULT 18;
+
+ALTER TABLE public.orders
+    ADD COLUMN IF NOT EXISTS delivery_latitude NUMERIC(9,6),
+    ADD COLUMN IF NOT EXISTS delivery_longitude NUMERIC(9,6),
+    ADD COLUMN IF NOT EXISTS delivery_distance_km NUMERIC(5,2),
+    ADD COLUMN IF NOT EXISTS estimated_delivery_minutes INTEGER;
 
 -- ==============================================================================
 -- 11. SEED DATA (JOSH RESTAURANT)

@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import { PINCODE_PATTERN } from '@/lib/delivery';
 
+/** Optional customer coordinates from the "Use my location" button. */
+const coordinateSchema = z
+  .number()
+  .refine((value) => Number.isFinite(value), 'Invalid coordinate')
+  .optional();
+
 export const checkoutItemSchema = z.object({
   // NOTE: `z.guid()` (not `z.string().uuid()`) matches what Postgres accepts
   // for a `uuid` column - any 8-4-4-4-12 hex string. Zod v4's `.uuid()` also
@@ -28,6 +34,8 @@ export const checkoutCustomerFieldsSchema = z
       .string()
       .regex(PINCODE_PATTERN, 'Enter a valid 6-digit pincode')
       .optional(),
+    deliveryLatitude: coordinateSchema,
+    deliveryLongitude: coordinateSchema,
     preferredTime: z.string().min(1, 'Please select your preferred time').default('ASAP'),
     customerNotes: z.string().max(250, 'Notes cannot exceed 250 characters').optional().default(''),
     paymentMethod: z.enum(['cash_on_delivery', 'upi_on_delivery']),
@@ -67,6 +75,8 @@ export const checkoutFormSchema = z.object({
     .string()
     .regex(PINCODE_PATTERN, 'Enter a valid 6-digit pincode')
     .optional(),
+  deliveryLatitude: coordinateSchema,
+  deliveryLongitude: coordinateSchema,
   preferredTime: z.string().min(1, 'Please select your preferred time').default('ASAP'),
   customerNotes: z.string().max(250, 'Notes cannot exceed 250 characters').optional().default(''),
   paymentMethod: z.enum(['cash_on_delivery', 'upi_on_delivery']),

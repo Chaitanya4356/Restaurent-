@@ -120,9 +120,9 @@ UPI Payment**.
 
 ---
 
-## 🗺️ Delivery Area (Pincodes & Radius)
+## 🗺️ Delivery Area (Pincodes, Radius & ETA)
 
-You control where you deliver from **Admin → Settings**.
+You control where you deliver from **Admin → Settings → Delivery**.
 
 **Delivery radius (km)** — the area you advertise to customers. It appears on the
 home page, menu, cart, checkout, contact page and footer. Change it any time.
@@ -138,8 +138,49 @@ home page, menu, cart, checkout, contact page and footer. Change it any time.
 - ⚠️ If the list is **empty**, delivery is open to every address (the safe
   default until you configure it).
 
+### 📍 Restaurant Location & Estimated Delivery Time
+
+Set your **Restaurant Location** once and the site can measure the real distance
+to each customer and show an honest delivery estimate.
+
+**How to set it:**
+1. Open Google Maps and find your restaurant.
+2. **Right-click** the exact spot → click the coordinates that appear (e.g.
+   `17.7231, 83.3012`) — they're copied to your clipboard.
+3. In **Admin → Settings → Delivery → Restaurant Location**, paste them and press
+   **Set Location**, then **Save & Update Settings**.
+   (A full Google Maps URL also works — the coordinates are read from it.)
+
+**Timing fields:**
+- **Kitchen Prep Time** — how long a typical order takes to cook and pack
+  (default 25 min).
+- **Average Delivery Speed** — used to turn distance into time (default 18 km/h,
+  which suits city traffic).
+
+**How the estimate works:**
+
+```
+ETA = prep time + (distance ÷ average speed)
+```
+
+So a customer 10 km away sees roughly `25 + 33 = 58 min` → displayed as
+**~60 min**.
+
+**What customers see:** at checkout they can press **"Use my location"**. Their
+phone shares its position, the site fills in their address automatically, checks
+the distance against your radius, and shows either:
+
+- ✅ *"You're about 5.2 km away · Estimated delivery ~45 min"*, or
+- ❌ *"You are about 31 km away, outside our 20 km delivery area. You can still
+  order for Counter Pickup."*
+
+If a customer doesn't share their location, the **pincode list** is used instead.
+The kitchen dashboard then shows each delivery's **distance, ETA and a Navigate
+link** for the driver.
+
 > Rule of thumb: the radius is what you *say*, the pincode list is what you
-> *enforce*. Keep them roughly in sync.
+> *enforce* when the customer won't share a location, and the distance check is
+> what you enforce when they do.
 
 ---
 

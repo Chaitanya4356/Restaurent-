@@ -4,7 +4,7 @@ import { checkoutFormSchema, type CheckoutFormData } from '@/lib/validation/chec
 import { createAdminClient } from '@/lib/supabase/admin';
 import { calculateStoreStatus } from '@/lib/opening-hours';
 import { calculateDeliveryFee, validateDeliveryMinimum } from '@/lib/pricing';
-import { isPincodeServiceable } from '@/lib/delivery';
+import { checkDeliveryServiceability } from '@/lib/delivery';
 import { sendOwnerOrderNotificationEmail } from '@/lib/email/order-notification';
 import { createTrackingToken } from '@/lib/tracking';
 import type { Order } from '@/types/database';
@@ -120,8 +120,12 @@ export async function placeOrder(formData: CheckoutFormData): Promise<PlaceOrder
       });
     }
 
-    // 4. Delivery Serviceability - owner-managed pincode allow-list.
-    //    An empty list means delivery is open everywhere; pickup is never gated.
+    // 4. Delivery Serviceability - exact distance when the customer shared their
+    //    location, otherwise the owner's pincode allow-list. Same function the
+    //    checkout uses, so the customer's answer is never contradicted.
+    let deliveryDistanceKm: number | null = null;
+    let estimatedDeliveryMinutes: number | null = null;
+
     if (data.orderType === 'delivery') {
       const { data: allowedPincodes, error: pincodeError } = await adminSupabase
         .from('delivery_pincodes')
@@ -129,14 +133,41 @@ export async function placeOrder(formData: CheckoutFormData): Promise<PlaceOrder
         .eq('is_active', true);
 
       if (pincodeError) {
-        // Pre-migration the table may not exist yet - skip rather than block.
-        console.warn('Delivery pincode check skipped:', pincodeError.message);
-      } else if (!isPincodeServiceable(data.deliveryPincode ?? '', allowedPincodes ?? [])) {
+        console.warn('Pincode list unavailable - falling back:', pincodeError.message);
+      }
+
+      const outlet =
+        settings.outlet_latitude != null && settings.outlet_longitude != null
+          ? {
+              latitude: Number(settings.outlet_latitude),
+              longitude: Number(settings.outlet_longitude),
+            }
+          : null;
+
+      const coordinates =
+        typeof data.deliveryLatitude === 'number' && typeof data.deliveryLongitude === 'number'
+          ? { latitude: data.deliveryLatitude, longitude: data.deliveryLongitude }
+          : null;
+
+      const serviceability = checkDeliveryServiceability({
+        pincode: data.deliveryPincode ?? null,
+        coordinates,
+        allowedPincodes: allowedPincodes ?? [],
+        radiusKm: settings.delivery_radius_km ?? 20,
+        outlet,
+        prepTimeMinutes: settings.prep_time_minutes ?? 25,
+        avgSpeedKmh: settings.avg_speed_kmh ?? 18,
+      });
+
+      if (!serviceability.serviceable) {
         return {
           success: false,
-          error: `Sorry, we do not deliver to pincode ${data.deliveryPincode} yet. Please choose Counter Pickup or call us.`,
+          error: serviceability.message ?? 'We do not deliver to your address yet.',
         };
       }
+
+      deliveryDistanceKm = serviceability.distanceKm;
+      estimatedDeliveryMinutes = serviceability.etaMinutes;
     }
 
     // 5. Validate Delivery Limits & Fees
@@ -188,10 +219,20 @@ export async function placeOrder(formData: CheckoutFormData): Promise<PlaceOrder
       payment_status: 'pending',
     };
 
-    const orderPayload =
-      data.orderType === 'delivery' && data.deliveryPincode
-        ? { ...baseOrderPayload, delivery_pincode: data.deliveryPincode }
-        : baseOrderPayload;
+    const orderPayload = {
+      ...baseOrderPayload,
+      ...(data.orderType === 'delivery' && data.deliveryPincode
+        ? { delivery_pincode: data.deliveryPincode }
+        : {}),
+      ...(data.orderType === 'delivery'
+        ? {
+            delivery_latitude: data.deliveryLatitude ?? null,
+            delivery_longitude: data.deliveryLongitude ?? null,
+            delivery_distance_km: deliveryDistanceKm,
+            estimated_delivery_minutes: estimatedDeliveryMinutes,
+          }
+        : {}),
+    };
 
     let insertResult = await adminSupabase
       .from('orders')
@@ -199,9 +240,11 @@ export async function placeOrder(formData: CheckoutFormData): Promise<PlaceOrder
       .select('id, order_number')
       .single();
 
-    // Pre-migration fallback: orders.delivery_pincode does not exist yet.
-    if (insertResult.error && /delivery_pincode/i.test(insertResult.error.message)) {
-      console.warn('orders.delivery_pincode missing - retrying without it (run migrations/002_delivery_pincodes.sql)');
+    // Pre-migration fallback: one or more of the newer delivery columns does not
+    // exist yet. Retry with only the columns every version has, so a schema
+    // change can never block a customer's order.
+    if (insertResult.error && /schema cache|delivery_pincode|delivery_latitude|delivery_longitude|delivery_distance_km|estimated_delivery_minutes/i.test(insertResult.error.message)) {
+      console.warn('Delivery columns missing - retrying with the core payload:', insertResult.error.message);
       insertResult = await adminSupabase
         .from('orders')
         .insert(baseOrderPayload)

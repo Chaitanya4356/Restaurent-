@@ -11,7 +11,12 @@ import {
   type CheckoutCustomerFields,
 } from '@/lib/validation/checkout';
 import { placeOrder } from '@/app/actions/place-order';
-import { isPincodeServiceable, PINCODE_PATTERN } from '@/lib/delivery';
+import {
+  checkDeliveryServiceability,
+  isPincodeServiceable,
+  PINCODE_PATTERN,
+} from '@/lib/delivery';
+import { formatEta, roundEtaForDisplay, type Coordinates } from '@/lib/geo';
 import { formatPaiseToRupees } from '@/lib/utils';
 import Link from 'next/link';
 import {
@@ -26,9 +31,28 @@ import {
   Lock,
   QrCode,
   Banknote,
+  MapPin,
+  Navigation,
+  CheckCircle2,
 } from 'lucide-react';
 
-export function CheckoutClient({ allowedPincodes = [] }: { allowedPincodes?: string[] }) {
+export interface CheckoutDeliveryConfig {
+  allowedPincodes: string[];
+  radiusKm: number;
+  outlet: Coordinates | null;
+  prepTimeMinutes: number;
+  avgSpeedKmh: number;
+}
+
+export function CheckoutClient({ deliveryConfig }: { deliveryConfig: CheckoutDeliveryConfig }) {
+  const {
+    allowedPincodes,
+    radiusKm,
+    outlet,
+    prepTimeMinutes,
+    avgSpeedKmh,
+  } = deliveryConfig;
+
   const router = useRouter();
   const {
     items,
@@ -72,11 +96,107 @@ export function CheckoutClient({ allowedPincodes = [] }: { allowedPincodes?: str
 
   const selectedPaymentMethod = watch('paymentMethod');
   const watchedPincode = watch('deliveryPincode') ?? '';
+  const watchedAddress = watch('deliveryAddress') ?? '';
+  const watchedLat = watch('deliveryLatitude');
+  const watchedLng = watch('deliveryLongitude');
 
-  // Live serviceability hint (the server re-checks authoritatively on submit)
+  // "Use my location" state
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [locationUsed, setLocationUsed] = useState(false);
+
+  const sharedCoordinates: Coordinates | null =
+    typeof watchedLat === 'number' && typeof watchedLng === 'number'
+      ? { latitude: watchedLat, longitude: watchedLng }
+      : null;
+
+  /**
+   * Single source of truth for delivery eligibility - the same function the
+   * server runs in placeOrder(), so the customer can never be shown one answer
+   * and given another.
+   */
+  const serviceability = checkDeliveryServiceability({
+    pincode: watchedPincode,
+    coordinates: sharedCoordinates,
+    allowedPincodes: allowedPincodes.map((p) => ({ pincode: p })),
+    radiusKm,
+    outlet,
+    prepTimeMinutes,
+    avgSpeedKmh,
+  });
+
   const pincodeIsComplete = PINCODE_PATTERN.test(watchedPincode);
   const pincodeServiceable =
-    !pincodeIsComplete || isPincodeServiceable(watchedPincode, allowedPincodes.map((p) => ({ pincode: p })));
+    serviceability.decidedBy === 'distance' ||
+    !pincodeIsComplete ||
+    isPincodeServiceable(watchedPincode, allowedPincodes.map((p) => ({ pincode: p })));
+
+  /**
+   * Whether delivery may be submitted.
+   * Note: an *incomplete* pincode must not disable the button - the schema
+   * already requires it, and the server re-checks. Only a complete pincode that
+   * is not serviceable (or an out-of-range location) blocks submission.
+   */
+  const deliveryAllowed =
+    serviceability.serviceable || (serviceability.decidedBy === 'pincode' && !pincodeIsComplete);
+
+  const handleUseMyLocation = () => {
+    setLocationError(null);
+
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setLocationError('Your browser does not support location sharing. Please type your address.');
+      return;
+    }
+
+    setIsLocating(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const latitude = Number(position.coords.latitude.toFixed(6));
+        const longitude = Number(position.coords.longitude.toFixed(6));
+
+        setValue('deliveryLatitude', latitude);
+        setValue('deliveryLongitude', longitude);
+        setLocationUsed(true);
+
+        // Prefill the address + pincode from the coordinates (best effort).
+        try {
+          const res = await fetch(`/api/geo/reverse?lat=${latitude}&lng=${longitude}`, {
+            cache: 'no-store',
+          });
+          if (res.ok) {
+            const data = (await res.json()) as { address: string | null; postcode: string | null };
+            if (data.address && !watchedAddress.trim()) {
+              setValue('deliveryAddress', data.address.slice(0, 300));
+            }
+            if (data.postcode) {
+              setValue('deliveryPincode', data.postcode);
+            }
+          }
+        } catch {
+          // Address lookup is a convenience - the customer can type it.
+        }
+
+        setIsLocating(false);
+      },
+      (error) => {
+        setIsLocating(false);
+        setLocationError(
+          error.code === error.PERMISSION_DENIED
+            ? 'Location permission was denied. Please type your address and pincode instead.'
+            : 'We could not read your location. Please type your address and pincode instead.'
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  };
+
+  const clearLocation = () => {
+    setValue('deliveryLatitude', undefined);
+    setValue('deliveryLongitude', undefined);
+    setLocationUsed(false);
+    setLocationError(null);
+  };
 
   // If cart is empty, show return to menu
   if (items.length === 0) {
@@ -324,8 +444,79 @@ export function CheckoutClient({ allowedPincodes = [] }: { allowedPincodes?: str
                 )}
               </div>
 
-              {/* Pincode - gates our delivery service area */}
-              <div className="space-y-1 max-w-[12rem]">
+              {/* Use my location - sets the address and unlocks distance + ETA */}
+              <div className="space-y-2 pt-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleUseMyLocation}
+                    disabled={isLocating}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-950/70 disabled:opacity-60 text-amber-900 dark:text-amber-200 font-bold text-xs transition"
+                  >
+                    {isLocating ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Getting your location...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Navigation className="w-3.5 h-3.5" />
+                        <span>{locationUsed ? 'Update my location' : 'Use my location'}</span>
+                      </>
+                    )}
+                  </button>
+
+                  {locationUsed && (
+                    <button
+                      type="button"
+                      onClick={clearLocation}
+                      className="text-[11px] font-semibold text-stone-500 hover:text-rose-600 underline"
+                    >
+                      Remove location
+                    </button>
+                  )}
+
+                  <span className="text-[10px] text-stone-400">
+                    Fills your address automatically and checks if we deliver to you
+                  </span>
+                </div>
+
+                {locationError && (
+                  <p className="text-[11px] text-rose-600 dark:text-rose-400 font-semibold">
+                    {locationError}
+                  </p>
+                )}
+
+                {locationUsed && serviceability.distanceKm !== null && serviceability.etaMinutes !== null && (
+                  <div
+                    role="status"
+                    className={`p-3 rounded-xl border text-[11px] font-semibold flex items-start gap-2 ${
+                      deliveryAllowed
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200'
+                        : 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200'
+                    }`}
+                  >
+                    {deliveryAllowed ? (
+                      <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    )}
+                    <span>
+                      {deliveryAllowed ? (
+                        <>
+                          You&apos;re about <strong>{serviceability.distanceKm.toFixed(1)} km</strong>{' '}
+                          away · Estimated delivery{' '}
+                          <strong>{formatEta(roundEtaForDisplay(serviceability.etaMinutes))}</strong>
+                        </>
+                      ) : (
+                        serviceability.message
+                      )}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Pincode - gates our delivery service area */}              <div className="space-y-1 max-w-[12rem]">
                 <label htmlFor="deliveryPincode" className="block text-xs font-bold text-stone-700 dark:text-stone-300">
                   Pincode <span className="text-rose-500">*</span>
                 </label>
@@ -496,7 +687,7 @@ export function CheckoutClient({ allowedPincodes = [] }: { allowedPincodes?: str
               disabled={
                 isSubmitting ||
                 (orderType === 'delivery' && subtotalPaise < minOrderPaise) ||
-                (orderType === 'delivery' && !pincodeServiceable)
+                (orderType === 'delivery' && !deliveryAllowed)
               }
               className="w-full py-4 px-6 rounded-2xl bg-brand hover:bg-brand-dark active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-base shadow-xl shadow-brand/20 transition flex items-center justify-center gap-2"
             >

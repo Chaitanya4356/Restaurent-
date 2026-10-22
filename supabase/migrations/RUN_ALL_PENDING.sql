@@ -12,6 +12,7 @@
 --   001  UPI payment settings
 --   002  Delivery pincode allow-list
 --   003  Delivery radius
+--   004  Outlet location + delivery ETA
 -- ============================================================================
 
 -- ---------------------------------------------------------------------------
@@ -68,5 +69,35 @@ BEGIN
         ALTER TABLE public.restaurant_settings
             ADD CONSTRAINT restaurant_settings_radius_range
             CHECK (delivery_radius_km >= 1 AND delivery_radius_km <= 100);
+    END IF;
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- 004 - Outlet location + delivery ETA ("Use my location")
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.restaurant_settings
+    ADD COLUMN IF NOT EXISTS outlet_latitude NUMERIC(9,6),
+    ADD COLUMN IF NOT EXISTS outlet_longitude NUMERIC(9,6),
+    ADD COLUMN IF NOT EXISTS prep_time_minutes INTEGER NOT NULL DEFAULT 25,
+    ADD COLUMN IF NOT EXISTS avg_speed_kmh INTEGER NOT NULL DEFAULT 18;
+
+ALTER TABLE public.orders
+    ADD COLUMN IF NOT EXISTS delivery_latitude NUMERIC(9,6),
+    ADD COLUMN IF NOT EXISTS delivery_longitude NUMERIC(9,6),
+    ADD COLUMN IF NOT EXISTS delivery_distance_km NUMERIC(5,2),
+    ADD COLUMN IF NOT EXISTS estimated_delivery_minutes INTEGER;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'restaurant_settings_prep_time_range') THEN
+        ALTER TABLE public.restaurant_settings
+            ADD CONSTRAINT restaurant_settings_prep_time_range
+            CHECK (prep_time_minutes >= 0 AND prep_time_minutes <= 240);
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'restaurant_settings_avg_speed_range') THEN
+        ALTER TABLE public.restaurant_settings
+            ADD CONSTRAINT restaurant_settings_avg_speed_range
+            CHECK (avg_speed_kmh >= 1 AND avg_speed_kmh <= 120);
     END IF;
 END $$;
