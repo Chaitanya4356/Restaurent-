@@ -121,9 +121,14 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Success: clear cart and redirect to live tracking page
+    // Success: clear cart and redirect to the signed live tracking URL
     clearCart();
-    router.push(`/order-confirmation/${result.orderNumber}`);
+    if (!result.trackToken) {
+      // Should never happen, but never expose an untokenised tracking URL.
+      router.push('/track');
+      return;
+    }
+    router.push(`/order-confirmation/${result.orderNumber}/${result.trackToken}`);
   };
 
   const onFormError = (formErrors: FieldErrors<CheckoutCustomerFields>) => {

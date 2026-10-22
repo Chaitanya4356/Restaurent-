@@ -5,12 +5,15 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { calculateStoreStatus } from '@/lib/opening-hours';
 import { calculateDeliveryFee, validateDeliveryMinimum } from '@/lib/pricing';
 import { sendOwnerOrderNotificationEmail } from '@/lib/email/order-notification';
+import { createTrackingToken } from '@/lib/tracking';
 import type { Order } from '@/types/database';
 
 export interface PlaceOrderResult {
   success: boolean;
   orderNumber?: string;
   orderId?: string;
+  /** Signed capability token - required to view the live order tracking page. */
+  trackToken?: string;
   error?: string;
 }
 
@@ -205,6 +208,7 @@ export async function placeOrder(formData: CheckoutFormData): Promise<PlaceOrder
       success: true,
       orderNumber: newOrder.order_number,
       orderId: newOrder.id,
+      trackToken: createTrackingToken(newOrder.id),
     };
   } catch (error) {
     console.error('Unexpected error placing order:', error);

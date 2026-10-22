@@ -1,75 +1,50 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import { createAdminClient } from '@/lib/supabase/admin';
-import { OrderLiveTracker } from '@/components/OrderLiveTracker';
-import type { Order, OrderItem } from '@/types/database';
 import Link from 'next/link';
-import { ArrowLeft, Store } from 'lucide-react';
+import { Store, ArrowLeft, Search } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Order Status & Tracking | Josh Restaurant',
-  description: 'Track the live preparation and dispatch status of your order at Josh Restaurant.',
+  title: 'Order Tracking | Josh Restaurant',
+  robots: { index: false, follow: false },
 };
 
-export const dynamic = 'force-dynamic';
-
-interface PageProps {
-  params: Promise<{ orderNumber: string }>;
-}
-
-export default async function OrderConfirmationPage({ params }: PageProps) {
-  const { orderNumber } = await params;
-  const adminSupabase = createAdminClient();
-
-  // Fetch Order
-  const { data: order, error: orderError } = await adminSupabase
-    .from('orders')
-    .select('*')
-    .eq('order_number', orderNumber)
-    .single();
-
-  if (orderError || !order) {
-    return (
-      <div className="max-w-md mx-auto py-16 text-center space-y-4">
-        <div className="w-16 h-16 bg-stone-100 dark:bg-stone-800 rounded-full flex items-center justify-center mx-auto text-stone-400">
-          <Store className="w-8 h-8" />
-        </div>
-        <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100">
-          Order Not Found
-        </h1>
-        <p className="text-sm text-stone-500">
-          We could not find an order matching <span className="font-mono font-bold">#{orderNumber}</span>. Please verify your order number or check back later.
-        </p>
+/**
+ * Legacy / bookmarked order URL (no tracking token).
+ *
+ * Older links were `/order-confirmation/<order-number>` only. That URL is
+ * intentionally no longer enough to see an order - it would let anyone who
+ * guesses a short order number read a customer's name, phone and address.
+ * Customers are sent to the secure lookup instead.
+ */
+export default function OrderConfirmationVerifyPage() {
+  return (
+    <div className="max-w-md mx-auto py-16 text-center space-y-4">
+      <div className="w-16 h-16 bg-stone-100 dark:bg-stone-800 rounded-full flex items-center justify-center mx-auto text-stone-400">
+        <Store className="w-8 h-8" />
+      </div>
+      <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100">
+        One quick check to see your order
+      </h1>
+      <p className="text-sm text-stone-500">
+        Your order details are private, so this link needs a quick verification. Enter your
+        order number and the mobile number you used at checkout.
+      </p>
+      <Link
+        href="/track"
+        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-brand hover:bg-brand-dark text-white font-bold text-sm shadow-md transition"
+      >
+        <Search className="w-4 h-4" />
+        <span>Track My Order</span>
+      </Link>
+      <div>
         <Link
           href="/menu"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm shadow-md transition"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-stone-500 hover:text-stone-900 dark:hover:text-stone-100"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Browse Menu</span>
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Back to Menu</span>
         </Link>
       </div>
-    );
-  }
-
-  // Fetch Order Items Snapshot
-  const { data: items } = await adminSupabase
-    .from('order_items')
-    .select('*')
-    .eq('order_id', order.id);
-
-  // Fetch Restaurant Phone
-  const { data: settings } = await adminSupabase
-    .from('restaurant_settings')
-    .select('phone_number')
-    .eq('id', 1)
-    .single();
-
-  return (
-    <OrderLiveTracker
-      initialOrder={order as Order}
-      orderItems={(items || []) as OrderItem[]}
-      phone={settings?.phone_number || '+91 98765 43210'}
-    />
+    </div>
   );
 }

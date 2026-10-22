@@ -44,6 +44,7 @@
 - **Paise-Only Math:** All money is represented strictly as integers in **paise** (`₹240` = `24000` paise) to prevent floating-point inaccuracies.
 - **Zero Client Trust:** Server action recalculates all subtotals, line items, delivery fees, and order totals directly against database records.
 - **Database Row Level Security (RLS):** Strict Postgres RLS policies prevent anonymous scrapers from accessing customer orders or confidential sales data.
+- **Privacy-Safe Order Tracking:** Tracking URLs are signed with an HMAC capability token, and looking an order up by number also requires the phone number used at checkout - so order numbers cannot be scraped for customer names, phones or addresses.
 - **Payment Signature Verification:** Cryptographic HMAC SHA-256 verification using `crypto.timingSafeEqual` for Razorpay webhook payloads.
 
 ---

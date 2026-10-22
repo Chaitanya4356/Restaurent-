@@ -43,6 +43,27 @@ src/lib/auth/require-staff.ts → staff Data Access Layer (secure check)
 - The staff surface renders with **no customer chrome** (no header, cart drawer, footer).
 - The staff surface is `noindex, nofollow` and is disallowed in `robots.txt`; it is absent from `sitemap.xml`.
 - Customer PII (names, phone numbers, delivery addresses) is only ever loaded through a service-role query that runs **after** the staff guard has passed.
+- Order receipts are `noindex` and reachable only through a signed URL.
+
+### 1.2 Order Tracking Security
+
+Order numbers are short and sequential-looking (`JOSH-20261022-4921`), so the
+order number alone must never be enough to read an order.
+
+```
+checkout ──► placeOrder() ──► /order-confirmation/<order-number>/<HMAC token>
+                                        │
+                                        ▼
+                        verifyTrackingToken(order.id, token)
+                        (timingSafeEqual, signed with TRACKING_TOKEN_SECRET)
+
+/track ──► order number + phone ──► server action ──► tokens only if both match
+```
+
+The token is `HMAC-SHA256(secret, "order-tracking:<order uuid>")`, truncated to
+24 base64url characters. It requires no database column, is unguessable without
+the server secret, and is never returned by any endpoint until the caller has
+proved they know both the order number and the checkout phone number.
 
 ---
 

@@ -99,6 +99,13 @@
   - Upload validation: image MIME type check, 5 MB limit, unique collision-safe filenames, inline preview and remove-photo action
   - `next.config.ts` now allows Supabase Storage through `images.remotePatterns`
   - Featured dishes on the home page are chosen as a deterministic spread across categories instead of arbitrary rows
+- [x] **Phase 15 – Private Order Tracking & Checkout Fix:** Completed
+  - Order tracking URLs are now signed with an HMAC capability token (`/order-confirmation/<order-number>/<token>`); the order number alone no longer exposes customer name, phone or address
+  - `/track` requires the order number **and** the checkout phone number, and returns one generic error so orders cannot be enumerated
+  - Legacy order-number-only URLs render a verification prompt instead of the receipt
+  - 7 unit tests for token creation/verification/tampering + 12 end-to-end checks
+  - **Critical fix:** checkout rejected the seeded menu item ids because `z.string().uuid()` enforces RFC-4122 version/variant bits that Postgres does not. Switched to `z.guid()`, which matches the database; added 5 regression tests
+  - Temporary order + settings used for verification were deleted/restored
 
 ---
 

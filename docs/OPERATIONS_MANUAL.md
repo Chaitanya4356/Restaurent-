@@ -115,10 +115,22 @@ setting becomes visible or editable.
 | Session expiry | Supabase refreshes the staff session automatically, so a long shift never drops out mid-order; if the session does expire, sign in again |
 | Search engines | The whole `/admin` area is marked `noindex` and is blocked in `robots.txt` |
 
-**Owner checklist:**
-1. Change the default staff password on first use (Supabase Dashboard $\rightarrow$ Authentication $\rightarrow$ Users).
+**Owner checklist:**1. Change the default staff password on first use (Supabase Dashboard $\rightarrow$ Authentication $\rightarrow$ Users).
 2. Create one separate account per staff member so the audit trail stays meaningful.
 3. Sign out on the shared kitchen tablet at the end of every shift.
+
+---
+
+## 🔎 Order Tracking (What Customers See)
+
+- After checkout the customer lands on a private tracking page whose link contains a
+  secret **tracking token**. That link can be shared with the customer, but it cannot be
+  guessed from the order number.
+- If a customer loses the link, they open **`/track`** and enter:
+  1. their order number (e.g. `JOSH-20261022-4921`), and
+  2. the 10-digit mobile number they used at checkout.
+- **Staff do not need this** - use the Kitchen Orders dashboard, which shows every order.
+- Never share a customer's tracking link with anyone else; it reveals their delivery address.
 
 ---
 
