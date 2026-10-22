@@ -94,6 +94,8 @@ test.describe('Customer storefront', () => {
 
     await expect(page.getByText(/1\. Choose Fulfillment/i)).toBeVisible();
     await expect(page.getByText(/2\. Contact Information/i)).toBeVisible();
+    await expect(page.getByText(/Pay Online \(UPI\)/i)).toBeVisible();
+    await expect(page.getByText(/Cash on Handoff/i)).toBeVisible();
 
     // Pickup removes the minimum-order gate so the submit button is enabled.
     await page.getByRole('button', { name: /Counter Pickup/i }).click();
