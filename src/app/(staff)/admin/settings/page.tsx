@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { requireStaff } from '@/lib/auth/require-staff';
 import { AdminSettingsManager } from '@/components/AdminSettingsManager';
 import type { RestaurantSettings } from '@/types/database';
 
@@ -12,6 +13,9 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function AdminSettingsPage() {
+  // SECURE GUARD: staff only.
+  await requireStaff();
+
   const supabase = createAdminClient();
 
   const { data: settings } = await supabase

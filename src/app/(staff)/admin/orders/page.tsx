@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { requireStaff } from '@/lib/auth/require-staff';
 import { AdminOrdersManager, type OrderWithItems } from '@/components/AdminOrdersManager';
 import type { Order, OrderItem } from '@/types/database';
 
@@ -12,6 +13,10 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function AdminOrdersPage() {
+  // SECURE GUARD: staff only. Must run before any service-role query, which
+  // bypasses RLS and would otherwise expose every customer's PII.
+  await requireStaff();
+
   const supabase = createAdminClient();
 
   // Fetch all recent orders

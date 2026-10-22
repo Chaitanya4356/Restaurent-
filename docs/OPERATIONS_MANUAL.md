@@ -80,6 +80,27 @@ Navigate to [Admin Settings](https://joshrestaurent.vercel.app/admin/settings) t
 
 ---
 
+## 🔐 Staff Portal Access (Owner & Kitchen Staff)
+
+The staff portal (`/admin`) is **login-protected**. Staff must sign in with the
+Supabase account issued by the owner before any kitchen screen, dish, price or
+setting becomes visible or editable.
+
+| Rule | Behaviour |
+| :--- | :--- |
+| Signed out | Any `/admin/*` URL redirects to `/admin/login` and no order, customer or pricing data is sent to the browser |
+| Signed in | After login you are returned to the exact page you requested (e.g. `/admin/orders`) |
+| Already signed in | Opening `/admin/login` sends you straight to the kitchen dashboard |
+| Session expiry | Supabase refreshes the staff session automatically, so a long shift never drops out mid-order; if the session does expire, sign in again |
+| Search engines | The whole `/admin` area is marked `noindex` and is blocked in `robots.txt` |
+
+**Owner checklist:**
+1. Change the default staff password on first use (Supabase Dashboard $\rightarrow$ Authentication $\rightarrow$ Users).
+2. Create one separate account per staff member so the audit trail stays meaningful.
+3. Sign out on the shared kitchen tablet at the end of every shift.
+
+---
+
 ## 🔐 Database Security & Backups (Supabase)
 
 - **Row Level Security (RLS):** All tables are protected by Postgres RLS. Anonymous customers can only read active dishes and public store settings. Orders can **only** be read and updated by authenticated staff members.

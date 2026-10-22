@@ -76,6 +76,14 @@
 - [x] **Phase 11 – Handover & Documentation:** Completed
   - Comprehensive operations guide created in `docs/OPERATIONS_MANUAL.md` (daily opening checklist, live order management with audio chime, 1-click Sold Out toggle, price & menu updates, delivery controls, and Supabase backup instructions)
   - Full production README.md created with badges, live URLs, feature breakdown, testing commands, and local development setup
+- [x] **Phase 12 – Access Control & Surface Separation:** Completed
+  - Customer storefront and staff portal split into `(site)` and `(staff)` route groups with independent layouts (staff screens no longer render the customer header, cart drawer or footer)
+  - Next.js 16 `src/proxy.ts` added: optimistic staff gate + automatic Supabase session refresh, scoped to `/admin/:path*`
+  - New staff Data Access Layer (`src/lib/auth/require-staff.ts`): `requireStaff()` for pages, `assertStaff()` for server actions — secure JWT validation before any service-role query
+  - All three staff server-action modules (`admin-orders.ts`, `admin-menu.ts`) now reject unauthenticated callers
+  - Staff area marked `noindex` / `nofollow` and excluded from the sitemap
+  - Login flow returns staff to the originally requested page and validates the `next` parameter against open-redirect abuse
+  - 7 new unit tests for the access-control layer (30 Vitest tests passing)
 
 ---
 

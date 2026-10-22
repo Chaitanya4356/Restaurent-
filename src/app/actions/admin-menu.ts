@@ -1,14 +1,26 @@
 'use server';
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { assertStaff } from '@/lib/auth/require-staff';
 import type { MenuItem, RestaurantSettings } from '@/types/database';
 import { revalidatePath } from 'next/cache';
+
+/**
+ * Staff server actions for menu and restaurant settings management.
+ *
+ * SECURITY: these actions run with the Supabase SERVICE ROLE key (RLS bypassed),
+ * so each one starts with a secure `assertStaff()` check. Without it, an
+ * anonymous visitor could rewrite prices, delete dishes or disable the store.
+ */
 
 /**
  * Toggles the is_sold_out status for a dish with 1-click.
  */
 export async function toggleSoldOut(itemId: string, isSoldOut: boolean) {
   try {
+    const auth = await assertStaff();
+    if (!auth.ok) return { success: false, error: auth.error };
+
     const supabase = createAdminClient();
 
     const { error } = await supabase
@@ -36,6 +48,9 @@ export async function toggleSoldOut(itemId: string, isSoldOut: boolean) {
  */
 export async function upsertMenuItem(item: Partial<MenuItem> & { name: string; category_id: string; price_paise: number; dietary_type: 'veg' | 'non-veg' }) {
   try {
+    const auth = await assertStaff();
+    if (!auth.ok) return { success: false, error: auth.error };
+
     const supabase = createAdminClient();
 
     const payload = {
@@ -67,6 +82,9 @@ export async function upsertMenuItem(item: Partial<MenuItem> & { name: string; c
  */
 export async function deleteMenuItem(itemId: string) {
   try {
+    const auth = await assertStaff();
+    if (!auth.ok) return { success: false, error: auth.error };
+
     const supabase = createAdminClient();
     const { error } = await supabase.from('menu_items').delete().eq('id', itemId);
 
@@ -87,6 +105,9 @@ export async function deleteMenuItem(itemId: string) {
  */
 export async function updateRestaurantSettings(settings: Partial<RestaurantSettings>) {
   try {
+    const auth = await assertStaff();
+    if (!auth.ok) return { success: false, error: auth.error };
+
     const supabase = createAdminClient();
 
     const { error } = await supabase

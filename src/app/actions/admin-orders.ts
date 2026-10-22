@@ -1,14 +1,27 @@
 'use server';
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { assertStaff } from '@/lib/auth/require-staff';
 import type { OrderStatus, PaymentStatus } from '@/types/database';
 import { revalidatePath } from 'next/cache';
+
+/**
+ * Staff server actions for order lifecycle management.
+ *
+ * SECURITY: every action below uses the Supabase SERVICE ROLE key, which
+ * bypasses Row Level Security. Each action therefore starts with a secure
+ * `assertStaff()` check. Without it, anyone could POST to these endpoints and
+ * rewrite the restaurant's order book.
+ */
 
 /**
  * Server action to update an order's status (e.g. new -> preparing -> ready -> completed).
  */
 export async function updateOrderStatus(orderId: string, newStatus: OrderStatus) {
   try {
+    const auth = await assertStaff();
+    if (!auth.ok) return { success: false, error: auth.error };
+
     const supabase = createAdminClient();
 
     const { error } = await supabase
@@ -38,6 +51,9 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
  */
 export async function updateOrderPaymentStatus(orderId: string, paymentStatus: PaymentStatus) {
   try {
+    const auth = await assertStaff();
+    if (!auth.ok) return { success: false, error: auth.error };
+
     const supabase = createAdminClient();
 
     const { error } = await supabase

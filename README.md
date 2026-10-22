@@ -37,6 +37,8 @@
 - **Store Controls:** Configure delivery radius (20 km), flat delivery fee (₹40), free delivery qualification (₹500), and emergency pause switch.
 
 ### 🛡️ Security & Financial Integrity
+- **Staff-Only Portal:** The entire `/admin` area (kitchen dashboard, menu manager, settings) sits behind Supabase Auth. An optimistic gate in `src/proxy.ts` redirects signed-out visitors to the login screen, and a secure `requireStaff()` check in every staff page and server action blocks the underlying data (which uses the RLS-bypassing service-role key).
+- **Separate Staff Surface:** Staff screens render in their own layout (`(staff)` route group) with no customer header, cart or footer, and are marked `noindex` + disallowed in `robots.txt`.
 - **Paise-Only Math:** All money is represented strictly as integers in **paise** (`₹240` = `24000` paise) to prevent floating-point inaccuracies.
 - **Zero Client Trust:** Server action recalculates all subtotals, line items, delivery fees, and order totals directly against database records.
 - **Database Row Level Security (RLS):** Strict Postgres RLS policies prevent anonymous scrapers from accessing customer orders or confidential sales data.

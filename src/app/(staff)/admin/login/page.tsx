@@ -1,17 +1,31 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Lock, Mail, KeyRound, Loader2, ArrowLeft, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 
-export default function AdminLoginPage() {
+/**
+ * Staff sign-in screen.
+ *
+ * Note: this is the ONLY staff page that does not require an existing session.
+ * The `next` query parameter (set by `src/proxy.ts`) lets staff return to the
+ * exact page they originally requested after signing in.
+ */
+
+function StaffLoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Only allow internal staff paths as a post-login destination (no open redirect).
+  const requestedPath = searchParams.get('next');
+  const redirectTo =
+    requestedPath && requestedPath.startsWith('/admin') ? requestedPath : '/admin/orders';
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +46,10 @@ export default function AdminLoginPage() {
       }
 
       if (data.session) {
-        router.push('/admin/orders');
+        // `refresh()` re-renders the server components with the new session
+        // cookie so the staff pages pass their secure guard.
+        router.push(redirectTo);
+        router.refresh();
       }
     } catch (err) {
       setErrorMessage('Unexpected login failure. Please check your credentials.');
@@ -71,6 +88,7 @@ export default function AdminLoginPage() {
             <input
               type="email"
               required
+              autoComplete="username"
               placeholder="bchaitanya096@gmail.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -78,7 +96,6 @@ export default function AdminLoginPage() {
             />
           </div>
         </div>
-
         <div className="space-y-1">
           <label className="block text-xs font-bold text-stone-700 dark:text-stone-300">
             Password
@@ -88,6 +105,7 @@ export default function AdminLoginPage() {
             <input
               type="password"
               required
+              autoComplete="current-password"
               placeholder="••••••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -122,5 +140,19 @@ export default function AdminLoginPage() {
         </Link>
       </div>
     </div>
+  );
+}
+
+export default function AdminLoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-md mx-auto py-20 text-center text-xs text-stone-500">
+          Loading staff sign-in...
+        </div>
+      }
+    >
+      <StaffLoginForm />
+    </Suspense>
   );
 }

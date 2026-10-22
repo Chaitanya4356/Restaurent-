@@ -11,6 +11,41 @@
 
 ---
 
+## 1.1 Application Surfaces & Access Control
+
+The product is **one Next.js application** serving two clearly separated surfaces
+(route groups keep the public URLs unchanged):
+
+```
+src/app/
+  layout.tsx            → document shell only (<html>/<body>, fonts, JSON-LD)
+  (site)/               → PUBLIC CUSTOMER SITE
+    layout.tsx            Header + CartDrawer + Footer + CartProvider
+    page.tsx              Home
+    menu/ checkout/ track/ contact/ order-confirmation/ privacy/ terms/ refund/
+  (staff)/              → STAFF & OWNER PORTAL (login required)
+    layout.tsx            StaffShell chrome + `noindex` metadata
+    admin/                login/ orders/ menu/ settings/
+  api/webhooks/razorpay/   machine endpoint (HMAC verified)
+src/proxy.ts            → Next.js 16 Proxy: optimistic staff gate + session refresh
+src/lib/auth/require-staff.ts → staff Data Access Layer (secure check)
+```
+
+**Three layers of protection for the staff portal:**
+
+| Layer | Mechanism | Scope |
+|---|---|---|
+| 1. Optimistic | `src/proxy.ts` reads the session cookie, redirects signed-out visitors to `/admin/login`, and refreshes expiring Supabase sessions | `/admin/:path*` only |
+| 2. Secure | `requireStaff()` in every staff page and `assertStaff()` in every staff server action — validates the JWT with the Supabase Auth server before any service-role (RLS-bypassing) query runs | all staff reads & writes |
+| 3. Database | Postgres RLS allows `orders` / `order_items` only to `authenticated` roles; anonymous users have no direct table access | database |
+
+**Visibility rules:**
+- The staff surface renders with **no customer chrome** (no header, cart drawer, footer).
+- The staff surface is `noindex, nofollow` and is disallowed in `robots.txt`; it is absent from `sitemap.xml`.
+- Customer PII (names, phone numbers, delivery addresses) is only ever loaded through a service-role query that runs **after** the staff guard has passed.
+
+---
+
 ## 2. Order Lifecycle & State Machine
 
 ```

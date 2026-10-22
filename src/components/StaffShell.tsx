@@ -13,15 +13,18 @@ import {
   Flame,
 } from 'lucide-react';
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+/**
+ * Staff portal shell (kitchen tablet / owner screen).
+ *
+ * Visually and functionally isolated from the customer storefront:
+ * no customer header, no cart drawer, no public footer, and the whole
+ * surface is marked `noindex` by the parent `(staff)` layout.
+ */
+export default function StaffShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  // If on login page, don't show admin navigation
+  // The login screen renders standalone (no staff chrome).
   if (pathname === '/admin/login') {
     return <div className="min-h-screen bg-stone-100 dark:bg-stone-950 p-4">{children}</div>;
   }
@@ -31,6 +34,7 @@ export default function AdminLayout({
       const supabase = createClient();
       await supabase.auth.signOut();
       router.push('/admin/login');
+      router.refresh();
     } catch (e) {
       console.error('Sign out error:', e);
     }
@@ -43,7 +47,7 @@ export default function AdminLayout({
   ];
 
   return (
-    <div className="min-h-screen bg-stone-100 dark:bg-stone-950 flex flex-col -m-4 sm:-m-6 lg:-m-8">
+    <div className="min-h-screen bg-stone-100 dark:bg-stone-950 flex flex-col">
       {/* Top Admin Bar */}
       <header className="bg-stone-900 text-white border-b border-stone-800 sticky top-0 z-30 px-4 sm:px-6 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
@@ -107,9 +111,7 @@ export default function AdminLayout({
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-        {children}
-      </main>
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">{children}</main>
     </div>
   );
 }
