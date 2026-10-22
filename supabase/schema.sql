@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS public.restaurant_settings (
     delivery_fee_paise INTEGER NOT NULL DEFAULT 4000,           -- ₹40.00
     free_delivery_threshold_paise INTEGER NOT NULL DEFAULT 50000, -- Free above ₹500.00
     min_delivery_order_paise INTEGER NOT NULL DEFAULT 10000,    -- ₹100.00 minimum
+    delivery_radius_km INTEGER NOT NULL DEFAULT 20 CHECK (delivery_radius_km >= 1 AND delivery_radius_km <= 100),
     brand_color_primary TEXT NOT NULL DEFAULT '#E65100',
     brand_logo_url TEXT,
     -- Owner-configurable UPI collection details (shown to customers who
@@ -66,6 +67,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
     customer_name TEXT NOT NULL,
     customer_phone TEXT NOT NULL,
     delivery_address TEXT,
+    delivery_pincode TEXT,
     preferred_time TEXT NOT NULL DEFAULT 'ASAP',
     customer_notes TEXT,
     subtotal_paise INTEGER NOT NULL CHECK (subtotal_paise >= 0),
@@ -78,8 +80,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 6. ORDER ITEMS (HISTORICAL SNAPSHOT TABLE)
-CREATE TABLE IF NOT EXISTS public.order_items (
+-- 6. ORDER ITEMS (HISTORICAL SNAPSHOT TABLE)CREATE TABLE IF NOT EXISTS public.order_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     order_id UUID NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE,
     menu_item_id UUID REFERENCES public.menu_items(id) ON DELETE SET NULL,
@@ -91,11 +92,22 @@ CREATE TABLE IF NOT EXISTS public.order_items (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 7. PERFORMANCE INDEXES
+-- 7. DELIVERY PINCODES (OWNER-MANAGED SERVICEABILITY ALLOW-LIST)
+-- An empty table means "deliver anywhere". Any rows restrict delivery to them.
+CREATE TABLE IF NOT EXISTS public.delivery_pincodes (
+    pincode TEXT PRIMARY KEY,
+    area_name TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT delivery_pincodes_format CHECK (pincode ~ '^[1-9][0-9]{5}$')
+);
+
+-- 8. PERFORMANCE INDEXES
 CREATE INDEX IF NOT EXISTS idx_categories_display ON public.categories(display_order) WHERE is_active = true;
 CREATE INDEX IF NOT EXISTS idx_menu_items_category ON public.menu_items(category_id, display_order) WHERE is_active = true;
 CREATE INDEX IF NOT EXISTS idx_orders_status ON public.orders(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_order_items_order ON public.order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_delivery_pincodes_active ON public.delivery_pincodes(pincode) WHERE is_active = true;
 
 -- ==============================================================================
 -- 8. ROW LEVEL SECURITY (RLS)
@@ -106,6 +118,7 @@ ALTER TABLE public.menu_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.restaurant_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.delivery_pincodes ENABLE ROW LEVEL SECURITY;
 
 -- 8.1 CATEGORIES POLICIES
 DROP POLICY IF EXISTS "Public can view active categories" ON public.categories;
@@ -169,6 +182,19 @@ CREATE POLICY "Authenticated staff can view order items"
     TO authenticated
     USING (true);
 
+-- 8.6 DELIVERY PINCODE POLICIES
+DROP POLICY IF EXISTS "Public can view active delivery pincodes" ON public.delivery_pincodes;
+CREATE POLICY "Public can view active delivery pincodes"
+    ON public.delivery_pincodes FOR SELECT
+    USING (is_active = true);
+
+DROP POLICY IF EXISTS "Authenticated staff manage delivery pincodes" ON public.delivery_pincodes;
+CREATE POLICY "Authenticated staff manage delivery pincodes"
+    ON public.delivery_pincodes FOR ALL
+    TO authenticated
+    USING (true)
+    WITH CHECK (true);
+
 -- ==============================================================================
 -- 9. STORAGE BUCKET FOR DISH PHOTOS
 -- ==============================================================================
@@ -219,6 +245,14 @@ ALTER TABLE public.restaurant_settings
     ADD COLUMN IF NOT EXISTS upi_phone TEXT,
     ADD COLUMN IF NOT EXISTS upi_qr_url TEXT,
     ADD COLUMN IF NOT EXISTS upi_payee_name TEXT;
+
+-- Delivery pincode on existing orders (see migrations/002_delivery_pincodes.sql)
+ALTER TABLE public.orders
+    ADD COLUMN IF NOT EXISTS delivery_pincode TEXT;
+
+-- Owner-configurable delivery radius (see migrations/003_delivery_radius.sql)
+ALTER TABLE public.restaurant_settings
+    ADD COLUMN IF NOT EXISTS delivery_radius_km INTEGER NOT NULL DEFAULT 20;
 
 -- ==============================================================================
 -- 11. SEED DATA (JOSH RESTAURANT)

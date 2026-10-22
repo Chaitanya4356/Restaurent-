@@ -12,6 +12,7 @@
 export const DEFAULT_DELIVERY_FEE_PAISE = 4000; // ₹40.00
 export const DEFAULT_FREE_DELIVERY_THRESHOLD_PAISE = 50000; // ₹500.00
 export const DEFAULT_MIN_DELIVERY_ORDER_PAISE = 10000; // ₹100.00
+export const DEFAULT_DELIVERY_RADIUS_KM = 20;
 
 export interface PricingItem {
   pricePaise: number;

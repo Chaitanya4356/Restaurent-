@@ -21,6 +21,7 @@ export function CartDrawer() {
     freeDeliveryThresholdPaise,
     amountToFreeDeliveryPaise,
     minOrderPaise,
+    deliveryRadiusKm,
     isCartDrawerOpen,
     setIsCartDrawerOpen,
   } = useCart();
@@ -227,7 +228,7 @@ export function CartDrawer() {
                   </span>
                 </div>
                 <div className="flex justify-between text-stone-600 dark:text-stone-400">
-                  <span>Vizag Delivery Fee (up to 20 km)</span>
+                  <span>Vizag Delivery Fee (up to {deliveryRadiusKm} km)</span>
                   <span className="font-medium">
                     {deliveryFeePaise === 0 ? (
                       <span className="text-emerald-600 font-bold">FREE</span>

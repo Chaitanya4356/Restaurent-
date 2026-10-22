@@ -38,6 +38,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
         deliveryFeePaise={settings.delivery_fee_paise}
         freeDeliveryThresholdPaise={settings.free_delivery_threshold_paise}
         minOrderPaise={settings.min_delivery_order_paise}
+        deliveryRadiusKm={settings.delivery_radius_km ?? 20}
       >
         <Header
           restaurantName={settings.restaurant_name}
@@ -62,6 +63,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
           deliveryFeePaise={settings.delivery_fee_paise}
           freeDeliveryThresholdPaise={settings.free_delivery_threshold_paise}
           minDeliveryOrderPaise={settings.min_delivery_order_paise}
+          deliveryRadiusKm={settings.delivery_radius_km ?? 20}
         />
       </CartProvider>
     </div>

@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireStaff } from '@/lib/auth/require-staff';
 import { AdminSettingsManager } from '@/components/AdminSettingsManager';
-import type { RestaurantSettings } from '@/types/database';
+import type { RestaurantSettings, DeliveryPincode } from '@/types/database';
 
 export const metadata: Metadata = {
   title: 'Restaurant Settings | Josh Admin',
@@ -24,6 +24,16 @@ export default async function AdminSettingsPage() {
     .eq('id', 1)
     .single();
 
+  // Delivery serviceability list (may not exist before the migration is run)
+  const { data: pincodes, error: pincodeError } = await supabase
+    .from('delivery_pincodes')
+    .select('pincode, area_name, is_active')
+    .order('pincode', { ascending: true });
+
+  if (pincodeError) {
+    console.warn('Delivery pincodes unavailable (has the migration been run?):', pincodeError.message);
+  }
+
   const initialSettings: RestaurantSettings = settings || {
     id: 1,
     restaurant_name: 'Josh',
@@ -42,5 +52,10 @@ export default async function AdminSettingsPage() {
     brand_logo_url: null,
   };
 
-  return <AdminSettingsManager initialSettings={initialSettings} />;
+  return (
+    <AdminSettingsManager
+      initialSettings={initialSettings}
+      initialPincodes={(pincodes || []) as DeliveryPincode[]}
+    />
+  );
 }

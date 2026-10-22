@@ -38,6 +38,8 @@ interface OrderLiveTrackerProps {
   trackToken: string;
   /** Owner-configured UPI collection details (from restaurant_settings). */
   upi?: UpiPaymentDetails;
+  /** Advertised delivery radius in km. */
+  deliveryRadiusKm?: number;
 }
 
 /** How often the tracking page refreshes the order status. */
@@ -89,6 +91,7 @@ export function OrderLiveTracker({
   phone = '+91 98765 43210',
   trackToken,
   upi,
+  deliveryRadiusKm = 20,
 }: OrderLiveTrackerProps) {
   const [order, setOrder] = useState<Order>(initialOrder);
   const [upiIdCopied, setUpiIdCopied] = useState(false);
@@ -333,7 +336,7 @@ export function OrderLiveTracker({
           </div>
           <div className="flex justify-between text-stone-500">
             <span>
-              {order.order_type === 'delivery' ? 'Delivery Fee (Vizag 20 km)' : 'Counter Pickup'}
+              {order.order_type === 'delivery' ? `Delivery Fee (Vizag ${deliveryRadiusKm} km)` : 'Counter Pickup'}
             </span>
             <span>
               {order.delivery_fee_paise === 0 ? (

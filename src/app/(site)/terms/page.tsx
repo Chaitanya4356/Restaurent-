@@ -57,7 +57,7 @@ export default async function TermsPage() {
         <section className="space-y-2">
           <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100">3. Delivery Area & Charges</h2>
           <p>
-            We provide doorstep food delivery within a <strong>20 km radius</strong> of our Siripuram, Visakhapatnam counter:
+            We provide doorstep food delivery within a <strong>{settings.delivery_radius_km ?? 20} km radius</strong> of our Siripuram, Visakhapatnam counter:
           </p>
           <ul className="list-disc pl-5 space-y-1">
             <li><strong>Minimum delivery order:</strong> {formatPaiseToRupees(settings.min_delivery_order_paise)}. Orders below this threshold must be picked up at the counter.</li>

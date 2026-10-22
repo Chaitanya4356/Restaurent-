@@ -21,6 +21,7 @@ const VALID_ORDER = {
   customerName: 'Chaitanya',
   customerPhone: '9876543210',
   deliveryAddress: 'Flat 402, Sea View Apartments, Siripuram, Visakhapatnam',
+  deliveryPincode: '530003',
   preferredTime: 'ASAP',
   customerNotes: '',
   paymentMethod: 'upi_on_delivery' as const,
@@ -64,5 +65,22 @@ describe('checkout validation', () => {
     expect(
       checkoutFormSchema.safeParse({ ...VALID_ORDER, deliveryAddress: 'short' }).success
     ).toBe(false);
+  });
+
+  it('requires a pincode for delivery orders', () => {
+    const { deliveryPincode: _omitted, ...withoutPincode } = VALID_ORDER;
+
+    expect(checkoutFormSchema.safeParse(withoutPincode).success).toBe(false);
+    expect(checkoutFormSchema.safeParse({ ...VALID_ORDER, deliveryPincode: '' }).success).toBe(false);
+    expect(checkoutFormSchema.safeParse({ ...VALID_ORDER, deliveryPincode: '53000' }).success).toBe(false);
+    expect(checkoutFormSchema.safeParse({ ...VALID_ORDER, deliveryPincode: '030003' }).success).toBe(false);
+  });
+
+  it('does not require a pincode for pickup orders', () => {
+    const { deliveryPincode: _omitted, deliveryAddress: _alsoOmitted, ...pickupOrder } = VALID_ORDER;
+
+    expect(
+      checkoutFormSchema.safeParse({ ...pickupOrder, orderType: 'pickup' as const }).success
+    ).toBe(true);
   });
 });

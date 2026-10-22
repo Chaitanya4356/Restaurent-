@@ -120,6 +120,29 @@ UPI Payment**.
 
 ---
 
+## 🗺️ Delivery Area (Pincodes & Radius)
+
+You control where you deliver from **Admin → Settings**.
+
+**Delivery radius (km)** — the area you advertise to customers. It appears on the
+home page, menu, cart, checkout, contact page and footer. Change it any time.
+
+**Pincodes we serve** — the *actual* gate:
+- Add each pincode you deliver to (with an optional area name, e.g. `530003` →
+  "Siripuram"). They show as removable chips.
+- A customer entering a pincode that is **not** on the list cannot place a
+  delivery order — they see "Sorry, we don't deliver to 530xxx yet" and are
+  offered **Counter Pickup** instead.
+- The check runs on the server, so it cannot be bypassed by editing the page.
+- **Pickup orders are never restricted.**
+- ⚠️ If the list is **empty**, delivery is open to every address (the safe
+  default until you configure it).
+
+> Rule of thumb: the radius is what you *say*, the pincode list is what you
+> *enforce*. Keep them roughly in sync.
+
+---
+
 ## 🛠️ Administrative Settings & Customization
 
 Navigate to [Admin Settings](https://joshrestaurent.vercel.app/admin/settings) to configure:

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PINCODE_PATTERN } from '@/lib/delivery';
 
 export const checkoutItemSchema = z.object({
   // NOTE: `z.guid()` (not `z.string().uuid()`) matches what Postgres accepts
@@ -23,6 +24,10 @@ export const checkoutCustomerFieldsSchema = z
       .string()
       .regex(/^[6-9]\d{9}$/, 'Please enter a valid 10-digit Indian mobile number (e.g. 9876543210)'),
     deliveryAddress: z.string().max(300, 'Address cannot exceed 300 characters').optional(),
+    deliveryPincode: z
+      .string()
+      .regex(PINCODE_PATTERN, 'Enter a valid 6-digit pincode')
+      .optional(),
     preferredTime: z.string().min(1, 'Please select your preferred time').default('ASAP'),
     customerNotes: z.string().max(250, 'Notes cannot exceed 250 characters').optional().default(''),
     paymentMethod: z.enum(['cash_on_delivery', 'upi_on_delivery']),
@@ -38,6 +43,13 @@ export const checkoutCustomerFieldsSchema = z
       message: 'Please provide a detailed delivery address with street and landmark (min 10 characters)',
       path: ['deliveryAddress'],
     }
+  )
+  .refine(
+    (data) => data.orderType !== 'delivery' || !!data.deliveryPincode,
+    {
+      message: 'Pincode is required for delivery orders',
+      path: ['deliveryPincode'],
+    }
   );
 
 export const checkoutFormSchema = z.object({
@@ -51,6 +63,10 @@ export const checkoutFormSchema = z.object({
     .string()
     .regex(/^[6-9]\d{9}$/, 'Please enter a valid 10-digit Indian mobile number (e.g. 9876543210)'),
   deliveryAddress: z.string().max(300, 'Address cannot exceed 300 characters').optional(),
+  deliveryPincode: z
+    .string()
+    .regex(PINCODE_PATTERN, 'Enter a valid 6-digit pincode')
+    .optional(),
   preferredTime: z.string().min(1, 'Please select your preferred time').default('ASAP'),
   customerNotes: z.string().max(250, 'Notes cannot exceed 250 characters').optional().default(''),
   paymentMethod: z.enum(['cash_on_delivery', 'upi_on_delivery']),
@@ -65,6 +81,12 @@ export const checkoutFormSchema = z.object({
   {
     message: 'Please provide a detailed delivery address with street and landmark (min 10 characters)',
     path: ['deliveryAddress'],
+  }
+).refine(
+  (data) => data.orderType !== 'delivery' || !!data.deliveryPincode,
+  {
+    message: 'Pincode is required for delivery orders',
+    path: ['deliveryPincode'],
   }
 );
 

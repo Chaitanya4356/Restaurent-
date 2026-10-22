@@ -27,6 +27,7 @@ export const DEFAULT_SETTINGS: RestaurantSettings = {
   delivery_fee_paise: 4000,
   free_delivery_threshold_paise: 50000,
   min_delivery_order_paise: 10000,
+  delivery_radius_km: 20,
   brand_color_primary: '#E65100',
   brand_logo_url: null,
   upi_id: null,

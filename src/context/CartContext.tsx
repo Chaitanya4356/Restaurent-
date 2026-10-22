@@ -4,6 +4,7 @@ import React, { createContext, useContext, useSyncExternalStore } from 'react';
 import type { MenuItem } from '@/types/database';
 import {
   DEFAULT_DELIVERY_FEE_PAISE,
+  DEFAULT_DELIVERY_RADIUS_KM,
   DEFAULT_FREE_DELIVERY_THRESHOLD_PAISE,
   DEFAULT_MIN_DELIVERY_ORDER_PAISE,
   calculateOrderTotals,
@@ -29,6 +30,8 @@ interface CartContextType {
   freeDeliveryThresholdPaise: number;
   amountToFreeDeliveryPaise: number;
   minOrderPaise: number;
+  /** Advertised delivery radius in km (from restaurant settings). */
+  deliveryRadiusKm: number;
   isCartDrawerOpen: boolean;
   setIsCartDrawerOpen: (open: boolean) => void;
 }
@@ -39,6 +42,7 @@ interface CartProviderProps {
   deliveryFeePaise?: number;
   freeDeliveryThresholdPaise?: number;
   minOrderPaise?: number;
+  deliveryRadiusKm?: number;
 }
 
 const CART_STORAGE_KEY = 'josh_restaurant_cart_v1';
@@ -121,6 +125,7 @@ export function CartProvider({
   deliveryFeePaise: configuredDeliveryFeePaise = DEFAULT_DELIVERY_FEE_PAISE,
   freeDeliveryThresholdPaise = DEFAULT_FREE_DELIVERY_THRESHOLD_PAISE,
   minOrderPaise = DEFAULT_MIN_DELIVERY_ORDER_PAISE,
+  deliveryRadiusKm = DEFAULT_DELIVERY_RADIUS_KM,
 }: CartProviderProps) {
   const items = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const [isCartDrawerOpen, setIsCartDrawerOpen] = React.useState(false);
@@ -205,6 +210,7 @@ export function CartProvider({
         freeDeliveryThresholdPaise,
         amountToFreeDeliveryPaise: totals.amountToFreeDeliveryPaise,
         minOrderPaise,
+        deliveryRadiusKm,
         isCartDrawerOpen,
         setIsCartDrawerOpen,
       }}

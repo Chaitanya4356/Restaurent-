@@ -44,6 +44,8 @@ export interface Order {
   customer_name: string;
   customer_phone: string;
   delivery_address: string | null;
+  /** Pincode captured at checkout (delivery orders only). */
+  delivery_pincode?: string | null;
   preferred_time: string;
   customer_notes: string | null;
   subtotal_paise: number;
@@ -81,6 +83,8 @@ export interface RestaurantSettings {
   delivery_fee_paise: number;
   free_delivery_threshold_paise: number;
   min_delivery_order_paise: number;
+  /** Advertised delivery radius in km (owner-configurable). */
+  delivery_radius_km?: number;
   brand_color_primary: string;
   brand_logo_url: string | null;
   /** UPI collection details - owner-configurable, shown to online-payment customers. */
@@ -94,4 +98,12 @@ export interface CartItem {
   menuItem: MenuItem;
   quantity: number;
   notes?: string;
+}
+
+/** Owner-managed delivery serviceability entry. */
+export interface DeliveryPincode {
+  pincode: string;
+  area_name: string | null;
+  is_active: boolean;
+  created_at?: string;
 }

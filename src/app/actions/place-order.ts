@@ -4,6 +4,7 @@ import { checkoutFormSchema, type CheckoutFormData } from '@/lib/validation/chec
 import { createAdminClient } from '@/lib/supabase/admin';
 import { calculateStoreStatus } from '@/lib/opening-hours';
 import { calculateDeliveryFee, validateDeliveryMinimum } from '@/lib/pricing';
+import { isPincodeServiceable } from '@/lib/delivery';
 import { sendOwnerOrderNotificationEmail } from '@/lib/email/order-notification';
 import { createTrackingToken } from '@/lib/tracking';
 import type { Order } from '@/types/database';
@@ -119,13 +120,31 @@ export async function placeOrder(formData: CheckoutFormData): Promise<PlaceOrder
       });
     }
 
-    // 4. Validate Delivery Limits & Fees
+    // 4. Delivery Serviceability - owner-managed pincode allow-list.
+    //    An empty list means delivery is open everywhere; pickup is never gated.
+    if (data.orderType === 'delivery') {
+      const { data: allowedPincodes, error: pincodeError } = await adminSupabase
+        .from('delivery_pincodes')
+        .select('pincode')
+        .eq('is_active', true);
+
+      if (pincodeError) {
+        // Pre-migration the table may not exist yet - skip rather than block.
+        console.warn('Delivery pincode check skipped:', pincodeError.message);
+      } else if (!isPincodeServiceable(data.deliveryPincode ?? '', allowedPincodes ?? [])) {
+        return {
+          success: false,
+          error: `Sorry, we do not deliver to pincode ${data.deliveryPincode} yet. Please choose Counter Pickup or call us.`,
+        };
+      }
+    }
+
+    // 5. Validate Delivery Limits & Fees
     const deliveryCheck = validateDeliveryMinimum(
       recalculatedSubtotalPaise,
       data.orderType,
       settings.min_delivery_order_paise
     );
-
     if (!deliveryCheck.isValid) {
       const minRupees = settings.min_delivery_order_paise / 100;
       return {
@@ -150,25 +169,48 @@ export async function placeOrder(formData: CheckoutFormData): Promise<PlaceOrder
     const orderNumber = `JOSH-${dateStr}-${randomSuffix}`;
 
     // 6. Insert Order into Database
-    const { data: newOrder, error: orderInsertError } = await adminSupabase
+    // The base payload works on every database version. `delivery_pincode` is
+    // only added when it exists (see the retry below), so deploying this code
+    // can never block orders before the migration has been run.
+    const baseOrderPayload = {
+      order_number: orderNumber,
+      status: 'new',
+      order_type: data.orderType,
+      customer_name: data.customerName.trim(),
+      customer_phone: data.customerPhone.trim(),
+      delivery_address: data.orderType === 'delivery' ? data.deliveryAddress?.trim() : null,
+      preferred_time: data.preferredTime,
+      customer_notes: data.customerNotes?.trim() ? data.customerNotes.trim() : null,
+      subtotal_paise: recalculatedSubtotalPaise,
+      delivery_fee_paise: deliveryFeePaise,
+      total_paise: recalculatedTotalPaise,
+      payment_method: data.paymentMethod,
+      payment_status: 'pending',
+    };
+
+    const orderPayload =
+      data.orderType === 'delivery' && data.deliveryPincode
+        ? { ...baseOrderPayload, delivery_pincode: data.deliveryPincode }
+        : baseOrderPayload;
+
+    let insertResult = await adminSupabase
       .from('orders')
-      .insert({
-        order_number: orderNumber,
-        status: 'new',
-        order_type: data.orderType,
-        customer_name: data.customerName.trim(),
-        customer_phone: data.customerPhone.trim(),
-        delivery_address: data.orderType === 'delivery' ? data.deliveryAddress?.trim() : null,
-        preferred_time: data.preferredTime,
-        customer_notes: data.customerNotes?.trim() ? data.customerNotes.trim() : null,
-        subtotal_paise: recalculatedSubtotalPaise,
-        delivery_fee_paise: deliveryFeePaise,
-        total_paise: recalculatedTotalPaise,
-        payment_method: data.paymentMethod,
-        payment_status: 'pending',
-      })
+      .insert(orderPayload)
       .select('id, order_number')
       .single();
+
+    // Pre-migration fallback: orders.delivery_pincode does not exist yet.
+    if (insertResult.error && /delivery_pincode/i.test(insertResult.error.message)) {
+      console.warn('orders.delivery_pincode missing - retrying without it (run migrations/002_delivery_pincodes.sql)');
+      insertResult = await adminSupabase
+        .from('orders')
+        .insert(baseOrderPayload)
+        .select('id, order_number')
+        .single();
+    }
+
+    const newOrder = insertResult.data;
+    const orderInsertError = insertResult.error;
 
     if (orderInsertError || !newOrder) {
       console.error('Order insertion failed:', orderInsertError);

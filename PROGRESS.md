@@ -120,6 +120,14 @@
   - Cash orders are unaffected; staff confirm the payment with **Mark as Paid** on the kitchen dashboard
   - New shared `uploadPublicImage()` helper (MIME + 5 MB validation) used for payment assets
   - `supabase/migrations/001_upi_payment_settings.sql` adds the `upi_*` columns (idempotent); `updateRestaurantSettings()` degrades gracefully and still saves every other setting until the migration is applied
+- [x] **Phase 18 – Delivery Area Control:** Completed
+  - Delivery radius is now a setting (`delivery_radius_km`) and every "20 km" string across home, menu, cart, checkout, contact, footer, receipt and terms reads it live
+  - New `delivery_pincodes` table + `/admin/settings` manager (add/remove chips with area names): delivery orders are rejected server-side for pincodes outside the list, and the customer is offered Counter Pickup
+  - Checkout gained a required pincode field with an instant serviceability hint (the server re-checks authoritatively)
+  - Empty allow-list means "deliver anywhere", so deploying cannot take delivery offline before configuration
+  - `supabase/migrations/002_delivery_pincodes.sql`, `003_delivery_radius.sql` and a combined `RUN_ALL_PENDING.sql` (all idempotent)
+  - Orders insert falls back automatically if `orders.delivery_pincode` is missing, so the feature can ship before the migration without blocking checkouts
+  - 6 new unit tests (serviceability + pincode validation) and 1 new E2E test - 48 unit + 21 E2E passing
 
 ---
 

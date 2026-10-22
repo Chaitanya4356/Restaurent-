@@ -129,7 +129,7 @@ export default async function ContactPage() {
               <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100">
                 Delivery Coverage
               </h3>
-              <p className="text-xs text-stone-500">Within 20 km radius in Vizag</p>
+              <p className="text-xs text-stone-500">Within {settings.delivery_radius_km ?? 20} km radius in {settings.city}</p>
             </div>
           </div>
           <div className="text-xs space-y-1 text-stone-600 dark:text-stone-300 pt-1">

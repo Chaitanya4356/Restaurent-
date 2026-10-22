@@ -102,7 +102,7 @@ export default async function HomePage() {
           {/* Quick Perks Strip */}
           <div className="pt-4 flex flex-wrap items-center gap-4 text-xs font-medium text-amber-100">
             <span className="flex items-center gap-1.5">
-              <Bike className="w-4 h-4 text-amber-200" /> 20 km Vizag Delivery
+              <Bike className="w-4 h-4 text-amber-200" /> {settings.delivery_radius_km ?? 20} km Vizag Delivery
             </span>
             <span>•</span>
             <span className="flex items-center gap-1.5">
@@ -131,7 +131,7 @@ export default async function HomePage() {
           </div>
           <div className="space-y-1">
             <h3 className="font-bold text-base text-stone-900 dark:text-stone-100">
-              Fast 20 km Vizag Delivery
+              Fast {settings.delivery_radius_km ?? 20} km Vizag Delivery
             </h3>
             <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
               Piping hot food delivered straight to your doorstep across Visakhapatnam.{' '}

@@ -16,6 +16,7 @@ interface FooterProps {
   deliveryFeePaise?: number;
   freeDeliveryThresholdPaise?: number;
   minDeliveryOrderPaise?: number;
+  deliveryRadiusKm?: number;
 }
 
 export function Footer({
@@ -29,6 +30,7 @@ export function Footer({
   deliveryFeePaise = 4000,
   freeDeliveryThresholdPaise = 50000,
   minDeliveryOrderPaise = 10000,
+  deliveryRadiusKm = 20,
 }: FooterProps) {
   const openingLabel = formatTimeTo12h(openingTime);
   const closingLabel = formatTimeTo12h(closingTime);
@@ -89,7 +91,7 @@ export function Footer({
             <div className="flex items-start gap-2.5 text-sm text-stone-400 pt-1">
               <Bike className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <div className="text-xs">
-                <p className="font-semibold text-stone-200">20 km Radius in {city}</p>
+                <p className="font-semibold text-stone-200">{deliveryRadiusKm} km Radius in {city}</p>
                 <p>
                   {formatPaiseToRupees(deliveryFeePaise)} flat fee • FREE above{' '}
                   {formatPaiseToRupees(freeDeliveryThresholdPaise)}

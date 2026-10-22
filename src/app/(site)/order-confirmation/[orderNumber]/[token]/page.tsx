@@ -84,6 +84,7 @@ export default async function OrderConfirmationPage({ params }: PageProps) {
       orderItems={(items || []) as OrderItem[]}
       phone={settings?.phone_number || '+91 98765 43210'}
       trackToken={token}
+      deliveryRadiusKm={settings?.delivery_radius_km ?? 20}
       upi={{
         id: settings?.upi_id ?? null,
         phone: settings?.upi_phone ?? null,

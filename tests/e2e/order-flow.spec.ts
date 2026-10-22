@@ -108,8 +108,25 @@ test.describe('Customer storefront', () => {
     await expect(page).toHaveURL(/\/checkout$/);
   });
 
-  test('empty cart checkout offers a way back to the menu', async ({ page }) => {
+  test('delivery checkout requires a pincode', async ({ page }) => {
+    await page.goto('/menu');
+    await addFirstDishToCart(page);
+
+    // Bump quantity so the delivery minimum is met and the button is enabled
+    const increase = page.getByRole('button', { name: /^Increase /i }).first();
+    await increase.click();
+    await increase.click();
+
     await page.goto('/checkout');
+    await expect(page.getByText(/3\. Delivery Address \(Vizag\)/i)).toBeVisible();
+    await expect(page.getByLabel(/Pincode/i)).toBeVisible();
+
+    await page.getByRole('button', { name: /Confirm Order/i }).click();
+    await expect(page.getByText(/Enter a valid 6-digit pincode/i)).toBeVisible();
+    await expect(page).toHaveURL(/\/checkout$/);
+  });
+
+  test('empty cart checkout offers a way back to the menu', async ({ page }) => {    await page.goto('/checkout');
 
     await expect(page.getByRole('heading', { name: /Your cart is empty/i })).toBeVisible();
     await page.getByRole('link', { name: /Browse Menu/i }).click();

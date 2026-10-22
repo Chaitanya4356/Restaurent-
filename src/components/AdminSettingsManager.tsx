@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import type { RestaurantSettings } from '@/types/database';
+import type { RestaurantSettings, DeliveryPincode } from '@/types/database';
 import { updateRestaurantSettings } from '@/app/actions/admin-menu';
+import { addDeliveryPincode, removeDeliveryPincode } from '@/app/actions/admin-delivery';
 import { uploadPublicImage } from '@/lib/storage';
 import {
   Settings,
@@ -16,13 +17,20 @@ import {
   AlertTriangle,
   QrCode,
   Upload,
+  MapPin,
+  Plus,
+  X,
 } from 'lucide-react';
 
 interface AdminSettingsManagerProps {
   initialSettings: RestaurantSettings;
+  initialPincodes?: DeliveryPincode[];
 }
 
-export function AdminSettingsManager({ initialSettings }: AdminSettingsManagerProps) {
+export function AdminSettingsManager({
+  initialSettings,
+  initialPincodes = [],
+}: AdminSettingsManagerProps) {
   const [settings, setSettings] = useState<RestaurantSettings>(initialSettings);
   const [isAcceptingOrders, setIsAcceptingOrders] = useState(initialSettings.is_accepting_orders);
   const [openingTime, setOpeningTime] = useState(initialSettings.opening_time);
@@ -37,6 +45,9 @@ export function AdminSettingsManager({ initialSettings }: AdminSettingsManagerPr
   const [minDeliveryOrderRupees, setMinDeliveryOrderRupees] = useState(
     (initialSettings.min_delivery_order_paise / 100).toString()
   );
+  const [deliveryRadiusKm, setDeliveryRadiusKm] = useState(
+    (initialSettings.delivery_radius_km ?? 20).toString()
+  );
   const [phone, setPhone] = useState(initialSettings.phone_number);
   const [address, setAddress] = useState(initialSettings.address);
   const [brandColor, setBrandColor] = useState(initialSettings.brand_color_primary);
@@ -49,6 +60,13 @@ export function AdminSettingsManager({ initialSettings }: AdminSettingsManagerPr
     initialSettings.upi_payee_name || initialSettings.restaurant_name
   );
   const [isUploadingQr, setIsUploadingQr] = useState(false);
+
+  // Delivery serviceability allow-list
+  const [pincodes, setPincodes] = useState<DeliveryPincode[]>(initialPincodes);
+  const [newPincode, setNewPincode] = useState('');
+  const [newAreaName, setNewAreaName] = useState('');
+  const [isSavingPincode, setIsSavingPincode] = useState(false);
+  const [pincodeMessage, setPincodeMessage] = useState<string | null>(null);
 
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -70,6 +88,47 @@ export function AdminSettingsManager({ initialSettings }: AdminSettingsManagerPr
     e.target.value = '';
   };
 
+  const handleAddPincode = async () => {
+    setPincodeMessage(null);
+
+    const pincode = newPincode.trim();
+    if (!/^[1-9][0-9]{5}$/.test(pincode)) {
+      setPincodeMessage('Enter a valid 6-digit pincode (e.g. 530003).');
+      return;
+    }
+
+    setIsSavingPincode(true);
+    const res = await addDeliveryPincode({ pincode, areaName: newAreaName.trim() || undefined });
+    setIsSavingPincode(false);
+
+    if (!res.success) {
+      setPincodeMessage(res.error || 'Failed to add pincode.');
+      return;
+    }
+
+    setPincodes((prev) => {
+      const withoutDuplicate = prev.filter((p) => p.pincode !== pincode);
+      return [...withoutDuplicate, { pincode, area_name: newAreaName.trim() || null, is_active: true }].sort(
+        (a, b) => a.pincode.localeCompare(b.pincode)
+      );
+    });
+    setNewPincode('');
+    setNewAreaName('');
+    setPincodeMessage(`Added ${pincode}.`);
+  };
+
+  const handleRemovePincode = async (pincode: string) => {
+    setPincodeMessage(null);
+    const previous = pincodes;
+    setPincodes((prev) => prev.filter((p) => p.pincode !== pincode));
+
+    const res = await removeDeliveryPincode(pincode);
+    if (!res.success) {
+      setPincodes(previous);
+      setPincodeMessage(res.error || 'Failed to remove pincode.');
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {    e.preventDefault();
     setIsSaving(true);
     setSavedSuccess(false);
@@ -82,6 +141,7 @@ export function AdminSettingsManager({ initialSettings }: AdminSettingsManagerPr
       delivery_fee_paise: Math.round(parseFloat(deliveryFeeRupees) * 100),
       free_delivery_threshold_paise: Math.round(parseFloat(freeDeliveryThresholdRupees) * 100),
       min_delivery_order_paise: Math.round(parseFloat(minDeliveryOrderRupees) * 100),
+      delivery_radius_km: Math.min(100, Math.max(1, parseInt(deliveryRadiusKm, 10) || 20)),
       phone_number: phone.trim(),
       address: address.trim(),
       brand_color_primary: brandColor.trim(),
@@ -213,10 +273,10 @@ export function AdminSettingsManager({ initialSettings }: AdminSettingsManagerPr
         <div className="p-5 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xs space-y-4">
           <h2 className="text-sm font-bold uppercase tracking-wider text-stone-400 flex items-center gap-2">
             <Bike className="w-4 h-4 text-amber-600" />
-            <span>Delivery Fees & Minimums (Vizag 20 km)</span>
+            <span>Delivery Fees, Minimums & Radius</span>
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-1">
               <label className="block text-xs font-bold text-stone-700 dark:text-stone-300">
                 Flat Delivery Fee (₹)
@@ -255,7 +315,122 @@ export function AdminSettingsManager({ initialSettings }: AdminSettingsManagerPr
                 className="w-full px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-sm focus:outline-hidden"
               />
             </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-bold text-stone-700 dark:text-stone-300">
+                Delivery Radius (km)
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="100"
+                value={deliveryRadiusKm}
+                onChange={(e) => setDeliveryRadiusKm(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-sm focus:outline-hidden"
+              />
+              <p className="text-[10px] text-stone-500">
+                Shown to customers across the site. Actual delivery eligibility is decided by the
+                pincode list below.
+              </p>
+            </div>
           </div>
+        </div>
+
+        {/* Delivery Serviceability (pincode allow-list) */}
+        <div className="p-5 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xs space-y-4">
+          <div>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-stone-400 flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-amber-600" />
+              <span>Delivery Pincodes We Serve</span>
+            </h2>
+            <p className="text-xs text-stone-500 mt-1">
+              Customers entering a pincode that is <strong>not</strong> in this list cannot place a
+              delivery order - they are offered Counter Pickup instead. Pickup orders are never
+              restricted.
+            </p>
+            {pincodes.length === 0 ? (
+              <p className="mt-2 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-[11px] font-semibold">
+                ⚠️ No pincodes configured yet - delivery is currently open to <strong>every</strong>{' '}
+                address. Add your serviceable pincodes below to restrict it.
+              </p>
+            ) : (
+              <p className="mt-2 text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold">
+                ✓ Delivery restricted to {pincodes.length} pincode{pincodes.length === 1 ? '' : 's'}
+              </p>
+            )}
+          </div>
+
+          {/* Add */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              placeholder="Pincode e.g. 530003"
+              value={newPincode}
+              onChange={(e) => setNewPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  void handleAddPincode();
+                }
+              }}
+              className="w-full sm:w-40 px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-sm font-mono focus:outline-hidden focus:ring-2 focus:ring-amber-500"
+            />
+            <input
+              type="text"
+              placeholder="Area name (optional) e.g. Siripuram"
+              value={newAreaName}
+              onChange={(e) => setNewAreaName(e.target.value)}
+              className="flex-1 px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-sm focus:outline-hidden"
+            />
+            <button
+              type="button"
+              onClick={() => void handleAddPincode()}
+              disabled={isSavingPincode}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold text-xs shadow-xs transition"
+            >
+              {isSavingPincode ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Plus className="w-3.5 h-3.5" />
+              )}
+              <span>Add</span>
+            </button>
+          </div>
+
+          {pincodeMessage && (
+            <p className="text-[11px] font-semibold text-stone-600 dark:text-stone-300">
+              {pincodeMessage}
+            </p>
+          )}
+
+          {/* List */}
+          {pincodes.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-1">
+              {pincodes.map((entry) => (
+                <span
+                  key={entry.pincode}
+                  className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-xs"
+                >
+                  <span className="font-mono font-bold text-stone-800 dark:text-stone-100">
+                    {entry.pincode}
+                  </span>
+                  {entry.area_name && (
+                    <span className="text-stone-500 dark:text-stone-400">{entry.area_name}</span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void handleRemovePincode(entry.pincode)}
+                    className="p-0.5 rounded-md text-stone-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+                    aria-label={`Remove pincode ${entry.pincode}`}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Contact Info & Dynamic Brand Color */}
