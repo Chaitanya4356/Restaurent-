@@ -104,7 +104,7 @@ export function StaffLoginForm({
               type="email"
               required
               autoComplete="username"
-              placeholder="bchaitanya096@gmail.com"
+              placeholder="staff@yourrestaurant.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-sm focus:outline-hidden focus:ring-2 focus:ring-amber-500"
