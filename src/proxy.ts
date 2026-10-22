@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { isStaffEmail } from '@/lib/auth/staff-allow-list';
 
 /**
  * NEXT.JS 16 PROXY (formerly "middleware")
@@ -65,6 +66,25 @@ export async function proxy(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // AUTHORIZATION: signed in but not on the staff allow-list -> sign out and
+  // explain, instead of bouncing between the dashboard and the login screen.
+  if (user && !isStaffEmail(user.email)) {
+    console.warn(`Blocked staff portal access for unauthorised account: ${user.email}`);
+    await supabase.auth.signOut();
+
+    const url = request.nextUrl.clone();
+    url.pathname = LOGIN_PATH;
+    url.search = '';
+    url.searchParams.set('error', 'not_staff');
+
+    const redirectResponse = NextResponse.redirect(url);
+    // signOut() cleared the session cookies on `response` - carry them over,
+    // otherwise the stale session would immediately redirect again.
+    response.cookies.getAll().forEach((cookie) => redirectResponse.cookies.set(cookie));
+
+    return redirectResponse;
+  }
 
   // Not signed in -> send to the staff login screen.
   if (!user && !isLoginRoute) {

@@ -14,7 +14,13 @@ import Link from 'next/link';
  * HTML instead of deferring it behind a Suspense boundary, and makes an open
  * redirect impossible: only internal `/admin` paths are ever accepted.
  */
-export function StaffLoginForm({ nextPath }: { nextPath: string }) {
+export function StaffLoginForm({
+  nextPath,
+  accessDenied = false,
+}: {
+  nextPath: string;
+  accessDenied?: boolean;
+}) {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -64,6 +70,19 @@ export function StaffLoginForm({ nextPath }: { nextPath: string }) {
           Sign in to access the live kitchen dashboard, menu manager, and restaurant settings.
         </p>
       </div>
+
+      {accessDenied && (
+        <div
+          role="alert"
+          className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-start gap-2.5"
+        >
+          <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+          <span>
+            That account is not authorised for the staff portal. Sign in with a staff account, or
+            ask the owner to add your email to the staff list.
+          </span>
+        </div>
+      )}
 
       {errorMessage && (
         <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-start gap-2.5">

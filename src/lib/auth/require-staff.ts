@@ -1,6 +1,7 @@
 import { cache } from 'react';
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { isStaffEmail } from '@/lib/auth/staff-allow-list';
 
 /**
  * STAFF DATA ACCESS LAYER (DAL)
@@ -40,6 +41,14 @@ export const getStaffUser = cache(async (): Promise<StaffUser | null> => {
     const { data, error } = await supabase.auth.getUser();
 
     if (error || !data?.user) {
+      return null;
+    }
+
+    // AUTHORIZATION: being signed in is not enough - the account must be on the
+    // staff allow-list (see STAFF_EMAILS). Without this check, anyone who could
+    // self-register would reach the service-role-backed staff actions.
+    if (!isStaffEmail(data.user.email)) {
+      console.warn(`Blocked staff access for unauthorised account: ${data.user.email}`);
       return null;
     }
 

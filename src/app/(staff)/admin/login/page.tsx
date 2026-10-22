@@ -14,16 +14,17 @@ export const metadata: Metadata = {
 };
 
 interface AdminLoginPageProps {
-  searchParams: Promise<{ next?: string | string[] }>;
+  searchParams: Promise<{ next?: string | string[]; error?: string | string[] }>;
 }
 
 export default async function AdminLoginPage({ searchParams }: AdminLoginPageProps) {
   const params = await searchParams;
   const rawNext = Array.isArray(params.next) ? params.next[0] : params.next;
+  const rawError = Array.isArray(params.error) ? params.error[0] : params.error;
 
   // Only internal staff paths are accepted - blocks open-redirect abuse.
   const nextPath =
     rawNext && rawNext.startsWith('/admin') && !rawNext.startsWith('//') ? rawNext : '/admin/orders';
 
-  return <StaffLoginForm nextPath={nextPath} />;
+  return <StaffLoginForm nextPath={nextPath} accessDenied={rawError === 'not_staff'} />;
 }
