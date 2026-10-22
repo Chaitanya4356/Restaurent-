@@ -84,6 +84,42 @@ When a customer places an order:
 
 ---
 
+## 💳 UPI Online Payments (Scan & Pay)
+
+Customers who choose **Pay Online (UPI)** at checkout see your payment details on
+their order confirmation page. You control all of it from **Admin → Settings →
+UPI Payment**.
+
+**One-time setup:**
+1. Open your UPI app (GPay / PhonePe / Paytm / your bank app) and use **Receive
+   money → Show QR code**.
+2. Screenshot / download that QR image.
+3. In **Admin → Settings → UPI Payment**:
+   - **Payee Name** — what the customer sees (e.g. `Josh Restaurant`)
+   - **UPI ID / VPA** — e.g. `joshrestaurant@okhdfcbank`. This powers the
+     **Open UPI App** button, which pre-fills the exact order amount.
+   - **UPI Phone Number** — optional; the mobile number linked to the account.
+   - **UPI QR Code Image** — upload the screenshot (PNG/JPG, max 5 MB).
+4. Press **Save & Update Settings**.
+
+**How it works for the customer:**
+- At checkout they pick **Pay Online (UPI)** (the default) or **Cash on Handoff**.
+- On the confirmation / tracking page they see your QR, UPI ID (with a copy
+  button), the UPI phone number and the exact amount, plus an **Open UPI App**
+  button on mobile.
+- The page refreshes every 15 seconds, so the status updates as the kitchen works.
+
+**How staff confirm a payment:**
+- When the money lands in your bank/UPI app, open **Kitchen Orders** and press
+  **Mark as Paid** on that order. The customer's page then shows `paid`.
+- Payments are **not** verified automatically — there is no payment gateway
+  involved, so always check your UPI app before marking paid.
+
+> No gateway fees: customers pay your UPI account directly. This is why the
+> order is only marked paid by staff, not by the website.
+
+---
+
 ## 🛠️ Administrative Settings & Customization
 
 Navigate to [Admin Settings](https://joshrestaurent.vercel.app/admin/settings) to configure:

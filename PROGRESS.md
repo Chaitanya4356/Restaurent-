@@ -114,6 +114,12 @@
   - Removed the last hardcoded fees/hours/phone from the footer, checkout, home, terms and refund pages
   - Store-hours badge text is now derived from the configured opening/closing times instead of "7:00 AM / 10:40 PM"
   - Rewrote the Playwright suite against the real UI (20 tests: storefront, cart, checkout validation, tracking privacy, staff access control, axe audits) and installed Chromium to actually run it - 20/20 passing
+- [x] **Phase 17 – Dynamic UPI Payments (No Gateway):** Completed
+  - Owner can upload their own UPI QR image and set payee name, UPI ID and UPI phone from `/admin/settings` - no hardcoded payment details
+  - Customers choosing **Pay Online (UPI)** see the QR, UPI ID (with copy button), UPI number and exact amount on their confirmation page, plus a `upi://pay` deep link with the amount pre-filled
+  - Cash orders are unaffected; staff confirm the payment with **Mark as Paid** on the kitchen dashboard
+  - New shared `uploadPublicImage()` helper (MIME + 5 MB validation) used for payment assets
+  - `supabase/migrations/001_upi_payment_settings.sql` adds the `upi_*` columns (idempotent); `updateRestaurantSettings()` degrades gracefully and still saves every other setting until the migration is applied
 
 ---
 

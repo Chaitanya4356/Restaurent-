@@ -109,16 +109,49 @@ export async function updateRestaurantSettings(settings: Partial<RestaurantSetti
     if (!auth.ok) return { success: false, error: auth.error };
 
     const supabase = createAdminClient();
+    const payload = {
+      ...settings,
+      updated_at: new Date().toISOString(),
+    };
 
     const { error } = await supabase
       .from('restaurant_settings')
-      .update({
-        ...settings,
-        updated_at: new Date().toISOString(),
-      })
+      .update(payload)
       .eq('id', 1);
 
     if (error) {
+      // Graceful pre-migration fallback: the UPI columns are added by
+      // supabase/migrations/001_upi_payment_settings.sql. Until that has been
+      // run, still save every other setting instead of failing the whole form.
+      const mentionsUpiColumn = /upi_(id|phone|qr_url|payee_name)/.test(error.message);
+
+      if (mentionsUpiColumn) {
+        const rest: typeof payload = { ...payload };
+        delete rest.upi_id;
+        delete rest.upi_phone;
+        delete rest.upi_qr_url;
+        delete rest.upi_payee_name;
+
+        const { error: retryError } = await supabase
+          .from('restaurant_settings')
+          .update(rest)
+          .eq('id', 1);
+
+        if (!retryError) {
+          revalidatePath('/');
+          revalidatePath('/menu');
+          revalidatePath('/checkout');
+          revalidatePath('/contact');
+          revalidatePath('/admin/settings');
+          return {
+            success: false,
+            error:
+              'All other settings were saved, but the UPI fields need a one-time database update. ' +
+              'Run supabase/migrations/001_upi_payment_settings.sql in the Supabase SQL editor, then save again.',
+          };
+        }
+      }
+
       return { success: false, error: error.message };
     }
 

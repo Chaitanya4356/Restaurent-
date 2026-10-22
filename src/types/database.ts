@@ -83,6 +83,11 @@ export interface RestaurantSettings {
   min_delivery_order_paise: number;
   brand_color_primary: string;
   brand_logo_url: string | null;
+  /** UPI collection details - owner-configurable, shown to online-payment customers. */
+  upi_id?: string | null;
+  upi_phone?: string | null;
+  upi_qr_url?: string | null;
+  upi_payee_name?: string | null;
 }
 
 export interface CartItem {

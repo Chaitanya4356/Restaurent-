@@ -377,8 +377,8 @@ export default function CheckoutPage() {
                 <div className="flex items-center gap-2">
                   <QrCode className="w-5 h-5 text-amber-600" />
                   <div>
-                    <p className="text-sm font-bold">UPI QR on Handoff</p>
-                    <p className="text-[11px] text-stone-500">GPay, PhonePe, Paytm</p>
+                    <p className="text-sm font-bold">Pay Online (UPI)</p>
+                    <p className="text-[11px] text-stone-500">Scan our UPI QR after ordering</p>
                   </div>
                 </div>
               </label>
@@ -405,6 +405,16 @@ export default function CheckoutPage() {
                 </div>
               </label>
             </div>
+
+            {selectedPaymentMethod === 'upi_on_delivery' && (
+              <p className="text-[11px] text-stone-500 flex items-start gap-1.5">
+                <QrCode className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                <span>
+                  You&apos;ll see our UPI QR code and UPI ID on the confirmation page, with the exact
+                  amount filled in. Show the payment confirmation to our staff at handoff.
+                </span>
+              </p>
+            )}
           </div>
 
           {/* Place Order CTA Button */}

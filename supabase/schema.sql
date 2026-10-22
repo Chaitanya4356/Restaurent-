@@ -48,6 +48,12 @@ CREATE TABLE IF NOT EXISTS public.restaurant_settings (
     min_delivery_order_paise INTEGER NOT NULL DEFAULT 10000,    -- ₹100.00 minimum
     brand_color_primary TEXT NOT NULL DEFAULT '#E65100',
     brand_logo_url TEXT,
+    -- Owner-configurable UPI collection details (shown to customers who
+    -- choose online payment; see supabase/migrations/001_upi_payment_settings.sql)
+    upi_id TEXT,
+    upi_phone TEXT,
+    upi_qr_url TEXT,
+    upi_payee_name TEXT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -202,6 +208,17 @@ CREATE POLICY "Staff can delete dish photos"
 -- ==============================================================================
 -- Enable Supabase Realtime publication on orders table for instant kitchen alerts
 ALTER PUBLICATION supabase_realtime ADD TABLE public.orders;
+
+-- ==============================================================================
+-- 12. IDEMPOTENT UPGRADES (safe to re-run on an existing project)
+-- ==============================================================================
+
+-- UPI payment details for existing installations
+ALTER TABLE public.restaurant_settings
+    ADD COLUMN IF NOT EXISTS upi_id TEXT,
+    ADD COLUMN IF NOT EXISTS upi_phone TEXT,
+    ADD COLUMN IF NOT EXISTS upi_qr_url TEXT,
+    ADD COLUMN IF NOT EXISTS upi_payee_name TEXT;
 
 -- ==============================================================================
 -- 11. SEED DATA (JOSH RESTAURANT)

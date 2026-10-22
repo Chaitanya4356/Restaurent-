@@ -29,6 +29,10 @@ export const DEFAULT_SETTINGS: RestaurantSettings = {
   min_delivery_order_paise: 10000,
   brand_color_primary: '#E65100',
   brand_logo_url: null,
+  upi_id: null,
+  upi_phone: null,
+  upi_qr_url: null,
+  upi_payee_name: null,
 };
 
 /**

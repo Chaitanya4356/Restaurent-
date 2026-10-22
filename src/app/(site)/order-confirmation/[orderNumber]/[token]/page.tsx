@@ -70,10 +70,11 @@ export default async function OrderConfirmationPage({ params }: PageProps) {
     .select('*')
     .eq('order_id', order.id);
 
-  // Fetch Restaurant Phone
+  // Fetch restaurant + payment settings (select '*' so the page keeps working
+  // before the UPI columns migration has been applied).
   const { data: settings } = await adminSupabase
     .from('restaurant_settings')
-    .select('phone_number')
+    .select('*')
     .eq('id', 1)
     .single();
 
@@ -83,6 +84,12 @@ export default async function OrderConfirmationPage({ params }: PageProps) {
       orderItems={(items || []) as OrderItem[]}
       phone={settings?.phone_number || '+91 98765 43210'}
       trackToken={token}
+      upi={{
+        id: settings?.upi_id ?? null,
+        phone: settings?.upi_phone ?? null,
+        qrUrl: settings?.upi_qr_url ?? null,
+        payeeName: settings?.upi_payee_name ?? null,
+      }}
     />
   );
 }

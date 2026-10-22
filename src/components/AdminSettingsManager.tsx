@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import type { RestaurantSettings } from '@/types/database';
 import { updateRestaurantSettings } from '@/app/actions/admin-menu';
+import { uploadPublicImage } from '@/lib/storage';
 import {
   Settings,
   Clock,
@@ -12,6 +14,8 @@ import {
   CheckCircle,
   Loader2,
   AlertTriangle,
+  QrCode,
+  Upload,
 } from 'lucide-react';
 
 interface AdminSettingsManagerProps {
@@ -37,11 +41,36 @@ export function AdminSettingsManager({ initialSettings }: AdminSettingsManagerPr
   const [address, setAddress] = useState(initialSettings.address);
   const [brandColor, setBrandColor] = useState(initialSettings.brand_color_primary);
 
+  // UPI / online payment details
+  const [upiId, setUpiId] = useState(initialSettings.upi_id || '');
+  const [upiPhone, setUpiPhone] = useState(initialSettings.upi_phone || '');
+  const [upiQrUrl, setUpiQrUrl] = useState(initialSettings.upi_qr_url || '');
+  const [upiPayeeName, setUpiPayeeName] = useState(
+    initialSettings.upi_payee_name || initialSettings.restaurant_name
+  );
+  const [isUploadingQr, setIsUploadingQr] = useState(false);
+
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleQrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingQr(true);
+    const result = await uploadPublicImage(file, 'settings');
+
+    if (result.error || !result.url) {
+      alert('QR upload failed: ' + (result.error || 'unknown error'));
+    } else {
+      setUpiQrUrl(result.url);
+    }
+
+    setIsUploadingQr(false);
+    e.target.value = '';
+  };
+
+  const handleSave = async (e: React.FormEvent) => {    e.preventDefault();
     setIsSaving(true);
     setSavedSuccess(false);
 
@@ -56,6 +85,10 @@ export function AdminSettingsManager({ initialSettings }: AdminSettingsManagerPr
       phone_number: phone.trim(),
       address: address.trim(),
       brand_color_primary: brandColor.trim(),
+      upi_id: upiId.trim() || null,
+      upi_phone: upiPhone.trim() || null,
+      upi_qr_url: upiQrUrl.trim() || null,
+      upi_payee_name: upiPayeeName.trim() || null,
     };
 
     const res = await updateRestaurantSettings(payload);
@@ -276,6 +309,116 @@ export function AdminSettingsManager({ initialSettings }: AdminSettingsManagerPr
               onChange={(e) => setAddress(e.target.value)}
               className="w-full px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-sm focus:outline-hidden"
             />
+          </div>
+        </div>
+
+        {/* UPI / Online Payment */}
+        <div className="p-5 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xs space-y-4">
+          <div>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-stone-400 flex items-center gap-2">
+              <QrCode className="w-4 h-4 text-amber-600" />
+              <span>UPI Payment (Scan &amp; Pay)</span>
+            </h2>
+            <p className="text-xs text-stone-500 mt-1">
+              Shown to every customer who chooses <strong>Pay Online (UPI)</strong> instead of cash.
+              They scan your QR or tap the UPI link after placing the order, then staff mark the
+              order paid from the Kitchen dashboard.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="block text-xs font-bold text-stone-700 dark:text-stone-300">
+                Payee Name (shown to customer)
+              </label>
+              <input
+                type="text"
+                value={upiPayeeName}
+                onChange={(e) => setUpiPayeeName(e.target.value)}
+                placeholder="Josh Restaurant"
+                className="w-full px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-sm focus:outline-hidden"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-bold text-stone-700 dark:text-stone-300">
+                UPI ID / VPA
+              </label>
+              <input
+                type="text"
+                value={upiId}
+                onChange={(e) => setUpiId(e.target.value)}
+                placeholder="joshrestaurant@okhdfcbank"
+                className="w-full px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-sm font-mono focus:outline-hidden"
+              />
+              <p className="text-[10px] text-stone-500">
+                Powers the &quot;Open UPI app&quot; button with the exact amount pre-filled.
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-bold text-stone-700 dark:text-stone-300">
+                UPI Phone Number (optional)
+              </label>
+              <input
+                type="text"
+                value={upiPhone}
+                onChange={(e) => setUpiPhone(e.target.value)}
+                placeholder="+91 98765 43210"
+                className="w-full px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-sm focus:outline-hidden"
+              />
+              <p className="text-[10px] text-stone-500">
+                The mobile number linked to the UPI account, shown under the QR.
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-bold text-stone-700 dark:text-stone-300">
+                UPI QR Code Image
+              </label>
+              <div className="flex items-center gap-3">
+                {upiQrUrl ? (
+                  <Image
+                    src={upiQrUrl}
+                    alt="Current UPI QR code"
+                    width={64}
+                    height={64}
+                    unoptimized
+                    className="w-16 h-16 rounded-lg border border-stone-200 dark:border-stone-700 object-contain bg-white"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-lg border border-dashed border-stone-300 dark:border-stone-700 flex items-center justify-center text-stone-400">
+                    <QrCode className="w-6 h-6" />
+                  </div>
+                )}
+                <div className="flex-1 space-y-1">
+                  <label className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-stone-200 dark:border-stone-700 text-xs font-semibold cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800 transition">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{isUploadingQr ? 'Uploading...' : 'Upload QR'}</span>
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={handleQrUpload}
+                      disabled={isUploadingQr}
+                      className="hidden"
+                    />
+                  </label>
+                  {upiQrUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setUpiQrUrl('')}
+                      className="block text-[10px] font-semibold text-rose-600 hover:underline"
+                    >
+                      Remove QR
+                    </button>
+                  )}
+                  <p className="text-[10px] text-stone-500">
+                    Download the QR from your UPI app (GPay / PhonePe / Paytm / bank app) and upload
+                    it here. PNG or JPG, max 5 MB.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

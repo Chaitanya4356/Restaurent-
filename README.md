@@ -35,6 +35,7 @@
 - **1-Click Sold Out Toggle:** Instant shortage management to mark items unavailable on the public menu during peak hours.
 - **Dishes & Media Management:** Add dishes, edit descriptions, adjust prices, and upload food photos to Supabase Storage.
 - **Optimised Dish Photos:** Uploaded photos are resized and served through `next/image` on the menu, home page, cart and staff manager, with a graceful placeholder when a dish has no photo.
+- **Owner-Managed UPI Payments:** Upload your own UPI QR code and set the payee name, UPI ID and phone in settings. Customers paying online see the QR, a copyable UPI ID and an amount-prefilled `upi://pay` link on their tracking page - no payment gateway, no transaction fees.
 - **Store Controls:** Configure delivery radius (20 km), flat delivery fee (₹40), free delivery qualification (₹500), and emergency pause switch.
 - **Live Settings Everywhere:** Every value in `/admin/settings` - fees, thresholds, phone, address, opening hours and brand colour - is read from the database and applied across the storefront, so the cart total always matches what the server charges.
 

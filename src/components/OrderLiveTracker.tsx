@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import type { Order, OrderItem, OrderStatus } from '@/types/database';
 import { formatPaiseToRupees } from '@/lib/utils';
 import Link from 'next/link';
@@ -16,7 +17,18 @@ import {
   Receipt,
   MapPin,
   Sparkles,
+  QrCode,
+  Copy,
+  Check,
+  ExternalLink,
 } from 'lucide-react';
+
+export interface UpiPaymentDetails {
+  id?: string | null;
+  phone?: string | null;
+  qrUrl?: string | null;
+  payeeName?: string | null;
+}
 
 interface OrderLiveTrackerProps {
   initialOrder: Order;
@@ -24,6 +36,8 @@ interface OrderLiveTrackerProps {
   phone?: string;
   /** Signed tracking token - required to poll the status endpoint. */
   trackToken: string;
+  /** Owner-configured UPI collection details (from restaurant_settings). */
+  upi?: UpiPaymentDetails;
 }
 
 /** How often the tracking page refreshes the order status. */
@@ -74,8 +88,32 @@ export function OrderLiveTracker({
   orderItems,
   phone = '+91 98765 43210',
   trackToken,
+  upi,
 }: OrderLiveTrackerProps) {
   const [order, setOrder] = useState<Order>(initialOrder);
+  const [upiIdCopied, setUpiIdCopied] = useState(false);
+
+  const showUpiPayment =
+    order.payment_method === 'upi_on_delivery' && order.payment_status !== 'paid';
+
+  const upiDeepLink = upi?.id
+    ? `upi://pay?pa=${encodeURIComponent(upi.id)}&pn=${encodeURIComponent(
+        upi.payeeName || 'Restaurant'
+      )}&am=${(order.total_paise / 100).toFixed(2)}&cu=INR&tn=${encodeURIComponent(
+        order.order_number
+      )}`
+    : null;
+
+  const copyUpiId = async () => {
+    if (!upi?.id) return;
+    try {
+      await navigator.clipboard.writeText(upi.id);
+      setUpiIdCopied(true);
+      setTimeout(() => setUpiIdCopied(false), 2000);
+    } catch {
+      // Clipboard can be blocked by the browser - the ID is still visible.
+    }
+  };
 
   // Poll the token-verified status endpoint. Anonymous visitors cannot
   // subscribe to `orders` over Supabase Realtime (RLS blocks it), so this is
@@ -343,7 +381,7 @@ export function OrderLiveTracker({
             </span>
             <p className="font-semibold text-stone-800 dark:text-stone-200 capitalize">
               {order.payment_method === 'upi_on_delivery'
-                ? 'UPI QR Code Scan on Handoff'
+                ? 'Pay Online (UPI)'
                 : 'Cash on Handoff'}
             </p>
             <p className="text-[11px] text-amber-700 dark:text-amber-400">
@@ -352,6 +390,125 @@ export function OrderLiveTracker({
           </div>
         </div>
       </div>
+
+      {/* Pay via UPI (only when the customer chose online payment) */}
+      {showUpiPayment && (
+        <div className="p-6 rounded-3xl bg-white dark:bg-stone-900 border border-amber-300 dark:border-amber-800 shadow-md space-y-5">
+          <div className="flex items-center gap-2 border-b border-stone-100 dark:border-stone-800 pb-3">
+            <QrCode className="w-5 h-5 text-amber-600" />
+            <h2 className="text-sm font-bold uppercase tracking-wider text-stone-400">
+              Pay {formatPaiseToRupees(order.total_paise)} via UPI
+            </h2>
+          </div>
+
+          <p className="text-xs text-stone-600 dark:text-stone-300">
+            You chose <strong>Pay Online (UPI)</strong>. Scan the QR or open your UPI app, then show
+            the payment confirmation to our staff at handoff.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center gap-5">
+            {upi?.qrUrl ? (
+              <div className="p-2 bg-white rounded-2xl border border-stone-200 dark:border-stone-700 shrink-0">
+                <Image
+                  src={upi.qrUrl}
+                  alt={`UPI QR code for ${upi.payeeName || 'the restaurant'}`}
+                  width={176}
+                  height={176}
+                  unoptimized
+                  className="w-44 h-44 object-contain"
+                />
+              </div>
+            ) : (
+              <div className="w-44 h-44 rounded-2xl border border-dashed border-stone-300 dark:border-stone-700 flex flex-col items-center justify-center text-center gap-2 text-stone-400 shrink-0 px-3">
+                <QrCode className="w-8 h-8" />
+                <span className="text-[11px]">
+                  QR not uploaded yet — pay at the counter or use the UPI ID
+                </span>
+              </div>
+            )}
+
+            <div className="flex-1 w-full space-y-3 text-xs">
+              {upi?.payeeName && (
+                <div>
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                    Pay To
+                  </span>
+                  <p className="font-semibold text-stone-800 dark:text-stone-200">
+                    {upi.payeeName}
+                  </p>
+                </div>
+              )}
+
+              {upi?.id && (
+                <div>
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                    UPI ID
+                  </span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <code className="px-2 py-1 rounded-md bg-stone-100 dark:bg-stone-800 font-mono text-[12px] text-stone-900 dark:text-stone-100 break-all">
+                      {upi.id}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={copyUpiId}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-stone-200 dark:border-stone-700 text-[10px] font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 transition"
+                      aria-label="Copy UPI ID"
+                    >
+                      {upiIdCopied ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-600" />
+                          <span>Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {upi?.phone && (
+                <div>
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                    UPI Phone Number
+                  </span>
+                  <p className="font-semibold text-stone-800 dark:text-stone-200">{upi.phone}</p>
+                </div>
+              )}
+
+              <div>
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                  Amount
+                </span>
+                <p className="font-black text-stone-900 dark:text-stone-100 text-base">
+                  {formatPaiseToRupees(order.total_paise)}
+                </p>
+                <p className="text-[10px] text-stone-500">
+                  Payment note: <span className="font-mono">{order.order_number}</span>
+                </p>
+              </div>
+
+              {upiDeepLink && (
+                <a
+                  href={upiDeepLink}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand hover:bg-brand-dark text-white font-bold text-xs shadow-md shadow-brand/20 transition"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Open UPI App (amount pre-filled)</span>
+                </a>
+              )}
+            </div>
+          </div>
+
+          <p className="text-[11px] text-stone-500 border-t border-stone-100 dark:border-stone-800 pt-3">
+            The kitchen marks your order as paid once the payment is confirmed. Keep this page open —
+            it updates automatically.
+          </p>
+        </div>
+      )}
 
       {/* Help & Navigation */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
