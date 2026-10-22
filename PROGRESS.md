@@ -106,6 +106,14 @@
   - 7 unit tests for token creation/verification/tampering + 12 end-to-end checks
   - **Critical fix:** checkout rejected the seeded menu item ids because `z.string().uuid()` enforces RFC-4122 version/variant bits that Postgres does not. Switched to `z.guid()`, which matches the database; added 5 regression tests
   - Temporary order + settings used for verification were deleted/restored
+- [x] **Phase 16 – Live Tracking, Form Validation & E2E Suite:** Completed
+  - Customer tracking now genuinely updates: a token-verified `/api/orders/[orderNumber]/status` endpoint is polled every 15s (anonymous visitors cannot use Supabase Realtime because RLS blocks `orders`); polling stops once the order is completed or cancelled
+  - Status endpoint exposes only `status`, `paymentStatus`, `updatedAt` - no customer PII - and rejects missing/forged tokens
+  - Added an explicit status pill ("Cooking", "Ready", ...) to the tracking page
+  - **Critical fix:** `@hookform/resolvers@3` was incompatible with Zod 4 (peer dep `zod ^3.23.8`), so checkout form validation threw a raw `ZodError` instead of showing messages. Upgraded to `@hookform/resolvers@6` and verified validation in a real browser
+  - Removed the last hardcoded fees/hours/phone from the footer, checkout, home, terms and refund pages
+  - Store-hours badge text is now derived from the configured opening/closing times instead of "7:00 AM / 10:40 PM"
+  - Rewrote the Playwright suite against the real UI (20 tests: storefront, cart, checkout validation, tracking privacy, staff access control, axe audits) and installed Chromium to actually run it - 20/20 passing
 
 ---
 

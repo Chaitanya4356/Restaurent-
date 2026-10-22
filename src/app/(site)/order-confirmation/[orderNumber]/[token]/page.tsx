@@ -82,6 +82,7 @@ export default async function OrderConfirmationPage({ params }: PageProps) {
       initialOrder={order as Order}
       orderItems={(items || []) as OrderItem[]}
       phone={settings?.phone_number || '+91 98765 43210'}
+      trackToken={token}
     />
   );
 }

@@ -106,7 +106,8 @@ export default async function HomePage() {
             </span>
             <span>•</span>
             <span className="flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-amber-200" /> Free delivery above ₹500
+              <Sparkles className="w-4 h-4 text-amber-200" /> Free delivery above{' '}
+              {formatPaiseToRupees(settings.free_delivery_threshold_paise)}
             </span>
             <span>•</span>
             <span className="flex items-center gap-1.5">
@@ -133,7 +134,9 @@ export default async function HomePage() {
               Fast 20 km Vizag Delivery
             </h3>
             <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
-              Piping hot food delivered straight to your doorstep across Visakhapatnam. ₹40 flat fee, free on orders above ₹500.
+              Piping hot food delivered straight to your doorstep across Visakhapatnam.{' '}
+              {formatPaiseToRupees(settings.delivery_fee_paise)} flat fee, free on orders above{' '}
+              {formatPaiseToRupees(settings.free_delivery_threshold_paise)}.
             </p>
           </div>
         </div>

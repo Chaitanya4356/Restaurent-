@@ -59,6 +59,9 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
           openingTime={settings.opening_time}
           closingTime={settings.closing_time}
           orderCutoffMinutes={settings.order_cutoff_minutes}
+          deliveryFeePaise={settings.delivery_fee_paise}
+          freeDeliveryThresholdPaise={settings.free_delivery_threshold_paise}
+          minDeliveryOrderPaise={settings.min_delivery_order_paise}
         />
       </CartProvider>
     </div>

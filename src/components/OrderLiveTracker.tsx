@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import type { Order, OrderItem, OrderStatus } from '@/types/database';
-import { createClient } from '@/lib/supabase/client';
 import { formatPaiseToRupees } from '@/lib/utils';
 import Link from 'next/link';
 import {
@@ -23,7 +22,12 @@ interface OrderLiveTrackerProps {
   initialOrder: Order;
   orderItems: OrderItem[];
   phone?: string;
+  /** Signed tracking token - required to poll the status endpoint. */
+  trackToken: string;
 }
+
+/** How often the tracking page refreshes the order status. */
+const STATUS_POLL_MS = 15_000;
 
 const STATUS_STEPS: Array<{
   status: OrderStatus;
@@ -57,47 +61,76 @@ const STATUS_STEPS: Array<{
   },
 ];
 
+const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+  new: 'Order received',
+  preparing: 'Cooking',
+  ready: 'Ready',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+};
+
 export function OrderLiveTracker({
   initialOrder,
   orderItems,
   phone = '+91 98765 43210',
+  trackToken,
 }: OrderLiveTrackerProps) {
   const [order, setOrder] = useState<Order>(initialOrder);
 
-  // Subscribe to real-time status updates on this specific order
+  // Poll the token-verified status endpoint. Anonymous visitors cannot
+  // subscribe to `orders` over Supabase Realtime (RLS blocks it), so this is
+  // what makes the tracker genuinely live for customers.
   useEffect(() => {
-    let supabase: ReturnType<typeof createClient> | null = null;
-    try {
-      supabase = createClient();
-    } catch (e) {
-      console.warn('Realtime client not available:', e);
-      return;
-    }
+    if (!trackToken) return;
+    if (order.status === 'completed' || order.status === 'cancelled') return;
 
-    const channel = supabase
-      .channel(`order-status-${order.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'orders',
-          filter: `id=eq.${order.id}`,
-        },
-        (payload) => {
-          if (payload.new) {
-            setOrder(payload.new as Order);
+    let cancelled = false;
+
+    const poll = async () => {
+      try {
+        const res = await fetch(
+          `/api/orders/${encodeURIComponent(order.order_number)}/status?token=${encodeURIComponent(trackToken)}`,
+          { cache: 'no-store' }
+        );
+        if (!res.ok) return;
+
+        const data = (await res.json()) as {
+          status?: OrderStatus;
+          paymentStatus?: Order['payment_status'];
+          updatedAt?: string;
+        };
+
+        if (cancelled || !data.status) return;
+
+        setOrder((previous) => {
+          if (
+            previous.status === data.status &&
+            previous.payment_status === data.paymentStatus
+          ) {
+            return previous;
           }
-        }
-      )
-      .subscribe();
 
-    return () => {
-      if (supabase) {
-        supabase.removeChannel(channel);
+          return {
+            ...previous,
+            status: data.status as OrderStatus,
+            payment_status: data.paymentStatus ?? previous.payment_status,
+            updated_at: data.updatedAt ?? previous.updated_at,
+          };
+        });
+      } catch {
+        // Network hiccup - the next tick will retry.
       }
     };
-  }, [order.id]);
+
+    // Refresh immediately, then on an interval until the order is finished.
+    void poll();
+    const interval = setInterval(poll, STATUS_POLL_MS);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [trackToken, order.order_number, order.status]);
 
   const currentStepIndex = STATUS_STEPS.findIndex((s) => s.status === order.status);
   const isCancelled = order.status === 'cancelled';
@@ -130,7 +163,30 @@ export function OrderLiveTracker({
             </h2>
           </div>
           <span className="text-xs font-medium text-stone-400">
-            Updates in real-time
+            Auto-refreshes every 15s
+          </span>
+        </div>
+
+        {/* Current status, so the customer gets an explicit answer at a glance */}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
+            Status
+          </span>
+          <span
+            data-testid="order-status"
+            className={`px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-wide ${
+              order.status === 'cancelled'
+                ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                : order.status === 'completed'
+                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                : order.status === 'ready'
+                ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
+                : order.status === 'preparing'
+                ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+            }`}
+          >
+            {ORDER_STATUS_LABELS[order.status]}
           </span>
         </div>
 

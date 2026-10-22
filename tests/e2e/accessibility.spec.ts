@@ -1,49 +1,46 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
-test.describe('Accessibility (A11y) Audits - WCAG 2.1 AA Compliance', () => {
-  test('homepage passes accessibility checks with 0 critical violations', async ({ page }) => {
-    await page.goto('/');
+/**
+ * Accessibility audits (WCAG 2.1 AA) for the main customer and staff surfaces.
+ * Colour-contrast is excluded because the brand palette is owner-configurable.
+ */
+const PAGES = [
+  { name: 'home', path: '/' },
+  { name: 'menu', path: '/menu' },
+  { name: 'track', path: '/track' },
+  { name: 'contact', path: '/contact' },
+  { name: 'cart (empty checkout)', path: '/checkout' },
+  { name: 'staff login', path: '/admin/login' },
+];
 
-    const accessibilityScanResults = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-      .disableRules(['color-contrast']) // Colors may have dark mode stylistic accents
-      .analyze();
+test.describe('Accessibility audits', () => {
+  for (const { name, path } of PAGES) {
+    test(`${name} page has no critical accessibility violations`, async ({ page }) => {
+      await page.goto(path);
 
-    const criticalViolations = accessibilityScanResults.violations.filter(
-      (v) => v.impact === 'critical'
-    );
+      const results = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .disableRules(['color-contrast'])
+        .analyze();
 
-    expect(criticalViolations).toEqual([]);
-  });
+      const criticalViolations = results.violations.filter((v) => v.impact === 'critical');
 
-  test('checkout page passes accessibility standards', async ({ page }) => {
-    await page.goto('/checkout');
+      expect(
+        criticalViolations,
+        criticalViolations.map((v) => `${v.id}: ${v.help}`).join('\n')
+      ).toEqual([]);
+    });
+  }
 
-    const accessibilityScanResults = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa'])
-      .disableRules(['color-contrast'])
-      .analyze();
+  test('menu items are reachable by keyboard', async ({ page }) => {
+    await page.goto('/menu');
 
-    const criticalViolations = accessibilityScanResults.violations.filter(
-      (v) => v.impact === 'critical'
-    );
+    const firstAddButton = page.getByRole('button', { name: /^Add .+ to order$/i }).first();
+    await firstAddButton.focus();
+    await expect(firstAddButton).toBeFocused();
 
-    expect(criticalViolations).toEqual([]);
-  });
-
-  test('admin login page is accessible', async ({ page }) => {
-    await page.goto('/admin/login');
-
-    const accessibilityScanResults = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa'])
-      .disableRules(['color-contrast'])
-      .analyze();
-
-    const criticalViolations = accessibilityScanResults.violations.filter(
-      (v) => v.impact === 'critical'
-    );
-
-    expect(criticalViolations).toEqual([]);
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('button', { name: /Shopping cart with 1 items?/i })).toBeVisible();
   });
 });

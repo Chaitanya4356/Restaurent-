@@ -65,6 +65,12 @@ The token is `HMAC-SHA256(secret, "order-tracking:<order uuid>")`, truncated to
 the server secret, and is never returned by any endpoint until the caller has
 proved they know both the order number and the checkout phone number.
 
+**Live updates:** anonymous visitors cannot subscribe to Supabase Realtime for
+`orders` (RLS denies them SELECT), so the tracking page polls a token-verified
+route (`GET /api/orders/[orderNumber]/status?token=…`) every 15 seconds. That
+route returns only `status`, `paymentStatus` and `updatedAt` - never PII - and
+the poll stops once the order reaches `completed` or `cancelled`.
+
 ---
 
 ## 2. Order Lifecycle & State Machine

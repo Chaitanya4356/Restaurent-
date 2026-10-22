@@ -1,87 +1,180 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
-test.describe('Josh Restaurant - Customer Ordering Flow', () => {
-  test('homepage displays restaurant branding, opening hours badge, and menu categories', async ({ page }) => {
+/**
+ * Josh Restaurant - customer ordering journey + access-control E2E suite.
+ *
+ * These specs are deliberately read-only against the database: they browse,
+ * filter, add to cart and trigger client-side validation, but never complete a
+ * real order (that would pollute the kitchen dashboard during a test run).
+ */
+
+/** Adds one in-stock dish from the menu page to the cart. */
+async function addFirstDishToCart(page: Page) {
+  const addButton = page.getByRole('button', { name: /^Add .+ to order$/i }).first();
+  await expect(addButton).toBeVisible();
+  await addButton.click();
+}
+
+test.describe('Customer storefront', () => {
+  test('home page shows branding, live status and the ordering CTA', async ({ page }) => {
     await page.goto('/');
 
-    // Check title and header
     await expect(page).toHaveTitle(/Josh Restaurant/i);
-    await expect(page.locator('header')).toContainText('Josh Restaurant');
+    await expect(page.locator('header')).toContainText('Josh');
     await expect(page.locator('header')).toContainText('Vizag');
 
-    // Check operating hours badge exists
-    const badge = page.locator('header').locator('text=Open').or(page.locator('header').locator('text=Closed'));
-    await expect(badge.first()).toBeVisible();
+    // Open/closed badge (text depends on the time of day)
+    await expect(
+      page.locator('header').getByText(/Open|Closed|Checking store hours/i).first()
+    ).toBeVisible();
 
-    // Check search input and menu tabs
-    const searchInput = page.locator('input[placeholder*="Search"]');
-    await expect(searchInput).toBeVisible();
+    await expect(
+      page.getByRole('heading', { level: 1, name: /Tiffins & Fragrant Dum Biryanis/i })
+    ).toBeVisible();
 
-    // Check category buttons exist
-    const allTab = page.locator('button:has-text("All Dishes")');
-    await expect(allTab).toBeVisible();
+    const orderCta = page.getByRole('link', { name: /Order Online Now/i });
+    await expect(orderCta).toBeVisible();
+    await orderCta.click();
+    await expect(page).toHaveURL(/\/menu$/);
   });
 
-  test('user can search and filter menu items', async ({ page }) => {
-    await page.goto('/');
+  test('menu supports search and dietary filtering', async ({ page }) => {
+    await page.goto('/menu');
 
-    // Type in search bar
-    const searchInput = page.locator('input[placeholder*="Search"]');
-    await searchInput.fill('Biryani');
+    await expect(page.getByRole('heading', { level: 1, name: /Our Online Menu/i })).toBeVisible();
 
-    // Should find biryani items
-    await expect(page.locator('text=Biryani').first()).toBeVisible();
+    const search = page.getByRole('searchbox', { name: /Search dishes/i });
+    await expect(search).toBeVisible();
 
-    // Clear search
-    await searchInput.clear();
+    await search.fill('Biryani');
+    await expect(page.getByRole('heading', { name: /Biryanis/i }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^Tiffins$/i })).toHaveCount(0);
 
-    // Filter by Veg
-    const vegButton = page.locator('button:has-text("Veg Only")');
-    if (await vegButton.isVisible()) {
-      await vegButton.click();
-      await expect(page.locator('text=Paneer').or(page.locator('text=Dosa')).first()).toBeVisible();
+    await search.clear();
+    await page.getByRole('button', { name: /^Veg$/i }).click();
+    // The non-veg dish is filtered out of the grid.
+    await expect(
+      page.getByRole('button', { name: /Add Josh Special Chicken Biryani to order/i })
+    ).toHaveCount(0);
+  });
+
+  test('adding a dish updates the cart counter', async ({ page }) => {
+    await page.goto('/menu');
+
+    await expect(
+      page.getByRole('button', { name: /Shopping cart with/i }).first()
+    ).toBeVisible();
+
+    await addFirstDishToCart(page);
+
+    await expect(
+      page.getByRole('button', { name: /Shopping cart with 1 items?/i })
+    ).toBeVisible();
+  });
+
+  test('cart drawer lists the dish and proceeds to checkout', async ({ page }) => {
+    await page.goto('/menu');
+    await addFirstDishToCart(page);
+
+    await page.getByRole('button', { name: /Shopping cart with/i }).click();
+
+    const drawer = page.getByRole('dialog', { name: /Shopping Cart/i });
+    await expect(drawer).toBeVisible();
+    await expect(drawer).toContainText(/Your Order \(1\)/i);
+    await expect(drawer.getByText(/Subtotal/i)).toBeVisible();
+
+    await drawer.getByRole('link', { name: /Proceed to Checkout/i }).click();
+    await expect(page).toHaveURL(/\/checkout$/);
+  });
+
+  test('checkout validates required customer details before submitting', async ({ page }) => {
+    await page.goto('/menu');
+    await addFirstDishToCart(page);
+    await page.goto('/checkout');
+
+    await expect(page.getByText(/1\. Choose Fulfillment/i)).toBeVisible();
+    await expect(page.getByText(/2\. Contact Information/i)).toBeVisible();
+
+    // Pickup removes the minimum-order gate so the submit button is enabled.
+    await page.getByRole('button', { name: /Counter Pickup/i }).click();
+
+    await page.getByRole('button', { name: /Confirm Order/i }).click();
+
+    // Client-side validation must block submission.
+    await expect(page.getByText(/Please fill in your Name, 10-digit Phone Number, and Address above\./i)).toBeVisible();
+    await expect(page.getByText(/Name must be at least 2 characters/i)).toBeVisible();
+    await expect(page).toHaveURL(/\/checkout$/);
+  });
+
+  test('empty cart checkout offers a way back to the menu', async ({ page }) => {
+    await page.goto('/checkout');
+
+    await expect(page.getByRole('heading', { name: /Your cart is empty/i })).toBeVisible();
+    await page.getByRole('link', { name: /Browse Menu/i }).click();
+    await expect(page).toHaveURL(/\/menu$/);
+  });
+});
+
+test.describe('Order tracking privacy', () => {
+  test('track page requires both order number and phone number', async ({ page }) => {
+    await page.goto('/track');
+
+    await expect(page.getByRole('heading', { name: /Track Your Live Order/i })).toBeVisible();
+    await expect(page.getByLabel(/Order Number/i)).toBeVisible();
+    await expect(page.getByLabel(/Mobile Number Used at Checkout/i)).toBeVisible();
+    await expect(page.getByText(/only you can view your order/i)).toBeVisible();
+  });
+
+  test('unknown order number and phone return a generic error', async ({ page }) => {
+    await page.goto('/track');
+
+    await page.getByLabel(/Order Number/i).fill('JOSH-20260101-0000');
+    await page.getByLabel(/Mobile Number Used at Checkout/i).fill('9876543210');
+    await page.getByRole('button', { name: /Track Order/i }).click();
+
+    await expect(
+      page.getByRole('alert').filter({ hasText: /could not find an order/i })
+    ).toBeVisible();
+    await expect(page).toHaveURL(/\/track$/);
+  });
+
+  test('legacy order-number-only URL no longer exposes a receipt', async ({ page }) => {
+    await page.goto('/order-confirmation/JOSH-20260101-0000');
+
+    await expect(page.getByRole('heading', { name: /One quick check/i })).toBeVisible();
+    await expect(page.getByText(/Order Receipt & Snapshot/i)).toHaveCount(0);
+    await expect(page.getByText(/Total to Pay/i)).toHaveCount(0);
+  });
+
+  test('a forged tracking token is rejected', async ({ page }) => {
+    await page.goto('/order-confirmation/JOSH-20260101-0000/AAAAAAAAAAAAAAAAAAAAAAAA');
+
+    await expect(page.getByRole('heading', { name: /tracking link is not valid/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Find My Order/i })).toBeVisible();
+  });
+});
+
+test.describe('Staff portal access control', () => {
+  test('signed-out visitors are redirected away from every staff screen', async ({ page }) => {
+    for (const path of ['/admin/orders', '/admin/menu', '/admin/settings']) {
+      await page.goto(path);
+      await expect(page).toHaveURL(/\/admin\/login/);
+      await expect(page.getByRole('heading', { name: /Staff & Owner Portal/i })).toBeVisible();
     }
   });
 
-  test('user can add item to cart and open cart drawer', async ({ page }) => {
-    await page.goto('/');
+  test('staff sign-in form is rendered and reachable', async ({ page }) => {
+    await page.goto('/admin/login');
 
-    // Find first available "Add to Order" button
-    const addButton = page.locator('button:has-text("Add to Order")').first();
-    await expect(addButton).toBeVisible();
-    await addButton.click();
-
-    // Cart drawer should open or cart badge should update
-    const cartButton = page.locator('button:has-text("Cart"), button[aria-label*="cart"], button:has-text("₹")').first();
-    await expect(cartButton).toBeVisible();
+    await expect(page.getByLabel(/Staff Email/i)).toBeVisible();
+    await expect(page.getByLabel(/Password/i)).toBeVisible();
+    await expect(page.getByRole('button', { name: /Sign In to Dashboard/i })).toBeVisible();
   });
 
-  test('checkout page validates mandatory fields and delivery details', async ({ page }) => {
-    await page.goto('/checkout');
-
-    // Verify checkout heading
-    await expect(page.locator('h1, h2')).toContainText(/Checkout/i);
-
-    // Verify delivery / pickup selection
-    const pickupOption = page.locator('label:has-text("Takeaway / Pickup"), button:has-text("Pickup")').first();
-    const deliveryOption = page.locator('label:has-text("Doorstep Delivery"), button:has-text("Delivery")').first();
-
-    await expect(pickupOption).toBeVisible();
-    await expect(deliveryOption).toBeVisible();
-
-    // Verify phone input has 10-digit Indian format guidance
-    const phoneInput = page.locator('input[placeholder*="9876543210"], input[name="customerPhone"]');
-    await expect(phoneInput).toBeVisible();
-  });
-
-  test('order tracking page allows lookup by order number', async ({ page }) => {
-    await page.goto('/track');
-
-    await expect(page.locator('h1, h2')).toContainText(/Track/i);
-    const orderInput = page.locator('input[placeholder*="JOSH-"]');
-    await expect(orderInput).toBeVisible();
-
-    const trackBtn = page.locator('button:has-text("Track Order")');
-    await expect(trackBtn).toBeVisible();
+  test('customer pages never expose staff navigation', async ({ page }) => {
+    for (const path of ['/', '/menu', '/track']) {
+      await page.goto(path);
+      await expect(page.getByText(/Josh Kitchen Portal/i)).toHaveCount(0);
+    }
   });
 });

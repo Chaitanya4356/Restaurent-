@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { MapPin, Phone, Clock, Bike, ShieldCheck, Heart } from 'lucide-react';
-import { formatTimeTo12h, minusMinutesFromTime } from '@/lib/utils';
+import { formatPaiseToRupees, formatTimeTo12h, minusMinutesFromTime } from '@/lib/utils';
 
 interface FooterProps {
   restaurantName?: string;
@@ -13,6 +13,9 @@ interface FooterProps {
   openingTime?: string;
   closingTime?: string;
   orderCutoffMinutes?: number;
+  deliveryFeePaise?: number;
+  freeDeliveryThresholdPaise?: number;
+  minDeliveryOrderPaise?: number;
 }
 
 export function Footer({
@@ -23,6 +26,9 @@ export function Footer({
   openingTime = '07:00:00',
   closingTime = '23:00:00',
   orderCutoffMinutes = 20,
+  deliveryFeePaise = 4000,
+  freeDeliveryThresholdPaise = 50000,
+  minDeliveryOrderPaise = 10000,
 }: FooterProps) {
   const openingLabel = formatTimeTo12h(openingTime);
   const closingLabel = formatTimeTo12h(closingTime);
@@ -84,8 +90,13 @@ export function Footer({
               <Bike className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <div className="text-xs">
                 <p className="font-semibold text-stone-200">20 km Radius in {city}</p>
-                <p>₹40 flat fee • FREE above ₹500</p>
-                <p className="text-stone-400">Min. delivery order: ₹100</p>
+                <p>
+                  {formatPaiseToRupees(deliveryFeePaise)} flat fee • FREE above{' '}
+                  {formatPaiseToRupees(freeDeliveryThresholdPaise)}
+                </p>
+                <p className="text-stone-400">
+                  Min. delivery order: {formatPaiseToRupees(minDeliveryOrderPaise)}
+                </p>
               </div>
             </div>
           </div>

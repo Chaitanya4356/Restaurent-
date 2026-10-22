@@ -2,13 +2,16 @@ import React from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { RefreshCcw, ArrowLeft } from 'lucide-react';
+import { getPublicSettings } from '@/lib/settings';
 
 export const metadata: Metadata = {
   title: 'Cancellation & Refund Policy | Josh Restaurant',
   description: 'Understand the cancellation window and refund procedures for orders at Josh Restaurant.',
 };
 
-export default function RefundPage() {
+export default async function RefundPage() {
+  const settings = await getPublicSettings();
+
   return (
     <div className="max-w-3xl mx-auto py-8 sm:py-12 space-y-8">
       <Link
@@ -37,7 +40,7 @@ export default function RefundPage() {
             Because our tiffins and biryanis are prepared fresh to order with hot ghee and freshly ground spices, our cancellation window is limited:
           </p>
           <ul className="list-disc pl-5 space-y-1">
-            <li><strong>Before Kitchen Cooking Begins:</strong> You may cancel your order free of charge while the order status is still marked as <em>&quot;New Order&quot;</em> by immediately calling our counter at <strong>+91 98765 43210</strong>.</li>
+            <li><strong>Before Kitchen Cooking Begins:</strong> You may cancel your order free of charge while the order status is still marked as <em>&quot;New Order&quot;</em> by immediately calling our counter at <strong>{settings.phone_number}</strong>.</li>
             <li><strong>Once Cooking Commences:</strong> Once our chefs have started cooking your meal (status marked as <em>&quot;Cooking in Kitchen&quot;</em>), orders cannot be cancelled or refunded as food preparation has already begun.</li>
           </ul>
         </section>
@@ -48,7 +51,7 @@ export default function RefundPage() {
             If any item delivered to you is incorrect, missing, or compromised in quality:
           </p>
           <ul className="list-disc pl-5 space-y-1">
-            <li>Please contact us within <strong>30 minutes</strong> of delivery at +91 98765 43210 or via WhatsApp with your Order Number and a photograph of the issue.</li>
+            <li>Please contact us within <strong>30 minutes</strong> of delivery at {settings.phone_number} or via WhatsApp with your Order Number and a photograph of the issue.</li>
             <li>We will promptly dispatch a replacement hot item or issue a full refund for the affected dish.</li>
           </ul>
         </section>
@@ -63,7 +66,7 @@ export default function RefundPage() {
         <section className="space-y-2">
           <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100">4. Support Contact</h2>
           <p>
-            For any billing or cancellation questions, please call our counter directly at <strong>+91 98765 43210</strong> or email <a href="mailto:bchaitanya096@gmail.com" className="text-amber-600 hover:underline">bchaitanya096@gmail.com</a>.
+            For any billing or cancellation questions, please call our counter directly at <strong>{settings.phone_number}</strong> or email <a href="mailto:bchaitanya096@gmail.com" className="text-amber-600 hover:underline">bchaitanya096@gmail.com</a>.
           </p>
         </section>
       </div>

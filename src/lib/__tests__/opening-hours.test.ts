@@ -20,7 +20,7 @@ describe('calculateStoreStatus - IST Operating Hours & Cutoff Logic', () => {
     expect(status.canAcceptOrders).toBe(false);
     expect(status.badgeVariant).toBe('closed');
     expect(status.statusText).toContain('Opens at 7:00 AM');
-    expect(status.nextOpenTime).toBe('07:00 AM');
+    expect(status.nextOpenTime).toBe('7:00 AM');
   });
 
   it('marks restaurant open and accepting orders during lunch hours (13:30 IST)', () => {

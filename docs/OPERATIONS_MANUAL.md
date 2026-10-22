@@ -125,7 +125,8 @@ setting becomes visible or editable.
 
 - After checkout the customer lands on a private tracking page whose link contains a
   secret **tracking token**. That link can be shared with the customer, but it cannot be
-  guessed from the order number.
+  guessed from the order number. The page refreshes itself every 15 seconds, so when the
+  kitchen accepts, cooks or completes the order the customer sees it without reloading.
 - If a customer loses the link, they open **`/track`** and enter:
   1. their order number (e.g. `JOSH-20261022-4921`), and
   2. the 10-digit mobile number they used at checkout.

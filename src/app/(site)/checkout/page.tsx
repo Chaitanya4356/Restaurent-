@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, type FieldErrors } from 'react-hook-form';
+import { useForm, type FieldErrors, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCart } from '@/context/CartContext';
 import {
@@ -34,6 +34,7 @@ export default function CheckoutPage() {
     itemCount,
     subtotalPaise,
     deliveryFeePaise,
+    freeDeliveryThresholdPaise,
     amountToFreeDeliveryPaise,
     minOrderPaise,
     clearCart,
@@ -50,7 +51,11 @@ export default function CheckoutPage() {
     watch,
     formState: { errors },
   } = useForm<CheckoutCustomerFields>({
-    resolver: zodResolver(checkoutCustomerFieldsSchema),
+    // The Zod schema declares defaults for preferredTime / customerNotes, so its
+    // INPUT type has them optional while its OUTPUT type (CheckoutCustomerFields)
+    // has them required. Cast to the output type - the values RHF hands to
+    // onSubmit are always the parsed output.
+    resolver: zodResolver(checkoutCustomerFieldsSchema) as unknown as Resolver<CheckoutCustomerFields>,
     defaultValues: {
       orderType: 'delivery',
       customerName: '',
@@ -206,7 +211,8 @@ export default function CheckoutPage() {
                   )}
                 </div>
                 <span className="text-[11px] text-stone-500 dark:text-stone-400">
-                  Within 20 km • ₹40 (Free &gt; ₹500)
+                  Within 20 km • {formatPaiseToRupees(deliveryFeePaise)} (Free &gt;{' '}
+                  {formatPaiseToRupees(freeDeliveryThresholdPaise)})
                 </span>
               </button>
 

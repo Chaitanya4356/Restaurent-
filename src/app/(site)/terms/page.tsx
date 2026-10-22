@@ -2,13 +2,22 @@ import React from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { FileText, ArrowLeft } from 'lucide-react';
+import { getPublicSettings } from '@/lib/settings';
+import { formatPaiseToRupees, formatTimeTo12h, minusMinutesFromTime } from '@/lib/utils';
 
 export const metadata: Metadata = {
   title: 'Terms of Service | Josh Restaurant',
   description: 'Review the ordering, delivery, and payment terms for Josh Restaurant in Visakhapatnam.',
 };
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const settings = await getPublicSettings();
+  const openingLabel = formatTimeTo12h(settings.opening_time);
+  const closingLabel = formatTimeTo12h(settings.closing_time);
+  const cutoffLabel = formatTimeTo12h(
+    minusMinutesFromTime(settings.closing_time, settings.order_cutoff_minutes)
+  );
+
   return (
     <div className="max-w-3xl mx-auto py-8 sm:py-12 space-y-8">
       <Link
@@ -41,7 +50,7 @@ export default function TermsPage() {
         <section className="space-y-2">
           <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100">2. Operating Hours & Order Cutoff</h2>
           <p>
-            Our kitchen operates daily from <strong>07:00 AM to 11:00 PM IST</strong>. To ensure food quality and kitchen closing routines, new online orders cut off strictly <strong>20 minutes prior to closing (10:40 PM IST)</strong>. Orders placed outside operating hours cannot be fulfilled.
+            Our kitchen operates daily from <strong>{openingLabel} to {closingLabel} IST</strong>. To ensure food quality and kitchen closing routines, new online orders cut off strictly <strong>{settings.order_cutoff_minutes} minutes prior to closing ({cutoffLabel} IST)</strong>. Orders placed outside operating hours cannot be fulfilled.
           </p>
         </section>
 
@@ -51,9 +60,9 @@ export default function TermsPage() {
             We provide doorstep food delivery within a <strong>20 km radius</strong> of our Siripuram, Visakhapatnam counter:
           </p>
           <ul className="list-disc pl-5 space-y-1">
-            <li><strong>Minimum delivery order:</strong> ₹100. Orders below this threshold must be picked up at the counter.</li>
-            <li><strong>Delivery fee:</strong> Flat ₹40 per delivery order.</li>
-            <li><strong>Free delivery:</strong> Applicable automatically on all orders with a subtotal of ₹500 or higher.</li>
+            <li><strong>Minimum delivery order:</strong> {formatPaiseToRupees(settings.min_delivery_order_paise)}. Orders below this threshold must be picked up at the counter.</li>
+            <li><strong>Delivery fee:</strong> Flat {formatPaiseToRupees(settings.delivery_fee_paise)} per delivery order.</li>
+            <li><strong>Free delivery:</strong> Applicable automatically on all orders with a subtotal of {formatPaiseToRupees(settings.free_delivery_threshold_paise)} or higher.</li>
           </ul>
         </section>
 

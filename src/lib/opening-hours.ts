@@ -1,3 +1,5 @@
+import { formatTimeTo12h, minusMinutesFromTime } from '@/lib/utils';
+
 export interface StoreStatus {
   isOpen: boolean;
   canAcceptOrders: boolean;
@@ -53,14 +55,19 @@ export function calculateStoreStatus(
   const closeMinutes = closeHour * 60 + closeMin;
   const cutoffMinutesFromMidnight = closeMinutes - cutoffMinutes;
 
+  // Labels are derived from the configured hours, never hardcoded, so the
+  // badge stays truthful after the owner edits opening/closing times.
+  const openingLabel = formatTimeTo12h(openingTimeStr);
+  const cutoffLabel = formatTimeTo12h(minusMinutesFromTime(closingTimeStr, cutoffMinutes));
+
   // Case 1: Before opening hours
   if (currentMinutesFromMidnight < openMinutes) {
     return {
       isOpen: false,
       canAcceptOrders: false,
-      statusText: `Closed • Opens at 7:00 AM`,
+      statusText: `Closed • Opens at ${openingLabel}`,
       badgeVariant: 'closed',
-      nextOpenTime: '07:00 AM',
+      nextOpenTime: openingLabel,
     };
   }
 
@@ -69,13 +76,13 @@ export function calculateStoreStatus(
     return {
       isOpen: false,
       canAcceptOrders: false,
-      statusText: `Closed • Opens tomorrow at 7:00 AM`,
+      statusText: `Closed • Opens tomorrow at ${openingLabel}`,
       badgeVariant: 'closed',
-      nextOpenTime: '07:00 AM',
+      nextOpenTime: openingLabel,
     };
   }
 
-  // Case 3: Kitchen order cutoff period (22:40 to 23:00)
+  // Case 3: Kitchen order cutoff period
   if (currentMinutesFromMidnight >= cutoffMinutesFromMidnight) {
     return {
       isOpen: true,
@@ -91,7 +98,7 @@ export function calculateStoreStatus(
     return {
       isOpen: true,
       canAcceptOrders: true,
-      statusText: `Open • Last orders in ${minutesUntilCutoff} mins (until 10:40 PM)`,
+      statusText: `Open • Last orders in ${minutesUntilCutoff} mins (until ${cutoffLabel})`,
       badgeVariant: 'closing-soon',
     };
   }
@@ -99,7 +106,7 @@ export function calculateStoreStatus(
   return {
     isOpen: true,
     canAcceptOrders: true,
-    statusText: 'Open Now • Accepting Orders until 10:40 PM',
+    statusText: `Open Now • Accepting Orders until ${cutoffLabel}`,
     badgeVariant: 'open',
   };
 }
