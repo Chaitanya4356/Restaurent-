@@ -89,9 +89,10 @@ export function parseCoordinates(input: string): Coordinates | null {
   if (!text) return null;
 
   const patterns = [
+    // !3d/!4d is the actual place marker - more precise than the map viewport
+    /!3d(-?\d{1,3}\.\d+)!4d(-?\d{1,3}\.\d+)/,
     /@(-?\d{1,3}\.\d+),(-?\d{1,3}\.\d+)/, // /@lat,lng,zoom
-    /[?&]q=(-?\d{1,3}\.\d+),\s*(-?\d{1,3}\.\d+)/, // ?q=lat,lng
-    /!3d(-?\d{1,3}\.\d+)!4d(-?\d{1,3}\.\d+)/, // place data blob
+    /[?&](?:q|query|ll|center)=(-?\d{1,3}\.\d+),\s*(-?\d{1,3}\.\d+)/, // ?q=lat,lng
     /^\s*(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)\s*$/, // bare pair
   ];
 
@@ -104,6 +105,18 @@ export function parseCoordinates(input: string): Coordinates | null {
       if (isValidCoordinates({ latitude, longitude })) {
         return { latitude, longitude };
       }
+    }
+  }
+
+  // Last resort: any "lat, lng" pair embedded in surrounding text
+  // (e.g. "17.7231, 83.3012 Josh Restaurant, Vizag").
+  const loose = text.match(/(-?\d{1,3}\.\d{4,})\s*,\s*(-?\d{1,3}\.\d{4,})/);
+  if (loose) {
+    const latitude = Number.parseFloat(loose[1]);
+    const longitude = Number.parseFloat(loose[2]);
+
+    if (isValidCoordinates({ latitude, longitude })) {
+      return { latitude, longitude };
     }
   }
 

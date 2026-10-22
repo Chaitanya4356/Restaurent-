@@ -68,6 +68,7 @@ export function AdminSettingsManager({
   );
   const [outletInput, setOutletInput] = useState('');
   const [outletMessage, setOutletMessage] = useState<string | null>(null);
+  const [isResolvingOutlet, setIsResolvingOutlet] = useState(false);
   const [phone, setPhone] = useState(initialSettings.phone_number);
   const [address, setAddress] = useState(initialSettings.address);
   const [brandColor, setBrandColor] = useState(initialSettings.brand_color_primary);
@@ -149,20 +150,61 @@ export function AdminSettingsManager({
     }
   };
 
-  const applyOutletInput = () => {
-    const parsed = parseCoordinates(outletInput);
+  const applyOutletInput = async () => {
+    const raw = outletInput.trim();
 
-    if (!parsed) {
-      setOutletMessage(
-        'Could not read coordinates. Paste a Google Maps link that contains @lat,lng (open the place, then copy the URL), or type them as 17.7231, 83.3012.'
-      );
+    if (!raw) {
+      setOutletMessage('Paste your Google Maps link (or the coordinates) first, then press Set Location.');
       return;
     }
 
-    setOutletLat(Number(parsed.latitude.toFixed(6)));
-    setOutletLng(Number(parsed.longitude.toFixed(6)));
-    setOutletMessage(`Location set to ${parsed.latitude.toFixed(5)}, ${parsed.longitude.toFixed(5)}. Press Save to apply.`);
-    setOutletInput('');
+    // 1. Long link or plain "lat, lng" - no network needed
+    const direct = parseCoordinates(raw);
+    if (direct) {
+      setOutletLat(Number(direct.latitude.toFixed(6)));
+      setOutletLng(Number(direct.longitude.toFixed(6)));
+      setOutletMessage(
+        `Location set to ${direct.latitude.toFixed(5)}, ${direct.longitude.toFixed(5)}. Press Save to apply.`
+      );
+      setOutletInput('');
+      return;
+    }
+
+    // 2. Short links (maps.app.goo.gl/…) need resolving server-side
+    if (/^https?:\/\//i.test(raw)) {
+      setIsResolvingOutlet(true);
+      setOutletMessage('Reading that link…');
+
+      try {
+        const res = await fetch('/api/geo/resolve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: raw }),
+        });
+        const data = (await res.json()) as { latitude?: number; longitude?: number; error?: string };
+
+        if (res.ok && typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+          setOutletLat(Number(data.latitude.toFixed(6)));
+          setOutletLng(Number(data.longitude.toFixed(6)));
+          setOutletMessage(
+            `Location set to ${data.latitude.toFixed(5)}, ${data.longitude.toFixed(5)}. Press Save to apply.`
+          );
+          setOutletInput('');
+        } else {
+          setOutletMessage(data.error || 'Could not read that link.');
+        }
+      } catch {
+        setOutletMessage('Could not read that link. Please paste the coordinates instead.');
+      } finally {
+        setIsResolvingOutlet(false);
+      }
+
+      return;
+    }
+
+    setOutletMessage(
+      'Could not read that. Paste a Google Maps link (short or long), or right-click your restaurant on the map and paste the numbers, e.g. 17.7231, 83.3012.'
+    );
   };
 
   const handleSave = async (e: React.FormEvent) => {    e.preventDefault();
@@ -447,16 +489,20 @@ export function AdminSettingsManager({
                 />
                 <button
                   type="button"
-                  onClick={applyOutletInput}
-                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition"
+                  onClick={() => void applyOutletInput()}
+                  disabled={isResolvingOutlet}
+                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white font-bold text-xs shadow-xs transition inline-flex items-center justify-center gap-1.5"
                 >
-                  Set Location
+                  {isResolvingOutlet && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{isResolvingOutlet ? 'Reading…' : 'Set Location'}</span>
                 </button>
               </div>
 
               <p className="text-[10px] text-stone-500">
-                On Google Maps, right-click your restaurant → click the coordinates to copy them, then
-                paste here. Press <strong>Save</strong> afterwards.
+                Short links (<code className="font-mono">maps.app.goo.gl/…</code>) and full Google Maps URLs both
+                work. Easiest: right-click your restaurant on Google Maps, click the numbers that appear
+                (e.g. <code className="font-mono">17.7231, 83.3012</code>), paste here, then press{' '}
+                <strong>Save</strong>.
               </p>
 
               {outletMessage && (
