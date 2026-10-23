@@ -207,6 +207,15 @@ CREATE POLICY "Authenticated staff manage delivery pincodes"
 -- ==============================================================================
 -- 9. STORAGE BUCKET FOR DISH PHOTOS
 -- ==============================================================================
+--
+-- NOTE: tables added after this base schema live in supabase/migrations/.
+-- On a fresh project run, apply them in order:
+--   001_upi_payment_settings.sql
+--   002_delivery_pincodes.sql
+--   003_delivery_radius.sql
+--   004_delivery_eta.sql
+--   005_promotions_and_customer_accounts.sql   (promotions + customer accounts)
+-- or simply run RUN_ALL_PENDING.sql plus 005.
 
 -- Create bucket 'dish-photos' if not already created
 INSERT INTO storage.buckets (id, name, public)
