@@ -39,6 +39,7 @@ export const checkoutCustomerFieldsSchema = z
     preferredTime: z.string().min(1, 'Please select your preferred time').default('ASAP'),
     customerNotes: z.string().max(250, 'Notes cannot exceed 250 characters').optional().default(''),
     paymentMethod: z.enum(['cash_on_delivery', 'upi_on_delivery']),
+    promotionCode: z.string().trim().max(40, 'Invalid code').optional(),
   })
   .refine(
     (data) => {
@@ -80,6 +81,7 @@ export const checkoutFormSchema = z.object({
   preferredTime: z.string().min(1, 'Please select your preferred time').default('ASAP'),
   customerNotes: z.string().max(250, 'Notes cannot exceed 250 characters').optional().default(''),
   paymentMethod: z.enum(['cash_on_delivery', 'upi_on_delivery']),
+  promotionCode: z.string().trim().max(40, 'Invalid code').optional(),
   items: z.array(checkoutItemSchema).min(1, 'Your cart is empty. Please add items to checkout.'),
 }).refine(
   (data) => {

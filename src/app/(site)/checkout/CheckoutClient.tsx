@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, type FieldErrors, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,6 +11,7 @@ import {
   type CheckoutCustomerFields,
 } from '@/lib/validation/checkout';
 import { placeOrder } from '@/app/actions/place-order';
+import { quoteOrder, type OrderQuote } from '@/app/actions/quote-order';
 import {
   checkDeliveryServiceability,
   isPincodeServiceable,
@@ -110,8 +111,68 @@ export function CheckoutClient({ deliveryConfig }: { deliveryConfig: CheckoutDel
   const selectedPaymentMethod = watch('paymentMethod');
   const watchedPincode = watch('deliveryPincode') ?? '';
   const watchedAddress = watch('deliveryAddress') ?? '';
+  const watchedPhone = watch('customerPhone') ?? '';
   const watchedLat = watch('deliveryLatitude');
   const watchedLng = watch('deliveryLongitude');
+
+  // Promotions: the server is the authority. The quote below only previews it.
+  const [quote, setQuote] = useState<OrderQuote | null>(null);
+  const [isQuoting, setIsQuoting] = useState(false);
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCode, setAppliedCode] = useState<string | null>(null);
+
+  const phoneForQuote = /^[6-9]\d{9}$/.test(watchedPhone) ? watchedPhone : undefined;
+
+  useEffect(() => {
+    if (items.length === 0) {
+      setQuote(null);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setIsQuoting(true);
+      try {
+        const result = await quoteOrder({
+          items: items.map((cartItem) => ({
+            menuItemId: cartItem.item.id,
+            quantity: cartItem.quantity,
+          })),
+          orderType,
+          code: appliedCode ?? undefined,
+          customerPhone: phoneForQuote,
+        });
+        if (!cancelled) setQuote(result);
+      } catch (e) {
+        console.warn('Quote failed:', e);
+      } finally {
+        if (!cancelled) setIsQuoting(false);
+      }
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [items, orderType, appliedCode, phoneForQuote]);
+
+  // Displayed totals: the server quote wins over the local estimate.
+  const displaySubtotal = quote?.subtotalPaise ?? subtotalPaise;
+  const displayDiscount = quote?.discountPaise ?? 0;
+  const displayDeliveryFee = quote?.deliveryFeePaise ?? (orderType === 'pickup' ? 0 : deliveryFeePaise);
+  const displayTotal = quote?.totalPaise ?? (subtotalPaise + (orderType === 'pickup' ? 0 : deliveryFeePaise));
+  const displaySavings = quote?.savingsPaise ?? 0;
+
+  const applyCoupon = () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setAppliedCode(code);
+  };
+
+  const removeCoupon = () => {
+    setAppliedCode(null);
+    setCouponInput('');
+  };
 
   // "Use my location" state
   const [isLocating, setIsLocating] = useState(false);
@@ -248,8 +309,6 @@ export function CheckoutClient({ deliveryConfig }: { deliveryConfig: CheckoutDel
   }
 
   const effectiveDeliveryFeePaise = orderType === 'pickup' ? 0 : deliveryFeePaise;
-  const effectiveTotalPaise = subtotalPaise + effectiveDeliveryFeePaise;
-
   const onSubmit = async (customerData: CheckoutCustomerFields) => {
     setIsSubmitting(true);
     setServerError(null);
@@ -264,6 +323,7 @@ export function CheckoutClient({ deliveryConfig }: { deliveryConfig: CheckoutDel
     const payload: CheckoutFormData = {
       ...customerData,
       orderType,
+      promotionCode: appliedCode ?? undefined,
       items: items.map((i) => ({
         menuItemId: i.item.id,
         quantity: i.quantity,
@@ -768,7 +828,7 @@ export function CheckoutClient({ deliveryConfig }: { deliveryConfig: CheckoutDel
               ) : (
                 <>
                   <Lock className="w-4 h-4" />
-                  <span>Confirm Order • {formatPaiseToRupees(effectiveTotalPaise)}</span>
+                  <span>Confirm Order • {formatPaiseToRupees(displayTotal)}</span>
                 </>
               )}
             </button>
@@ -808,24 +868,107 @@ export function CheckoutClient({ deliveryConfig }: { deliveryConfig: CheckoutDel
               ))}
             </div>
 
+            {/* Coupon / offers */}
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={couponInput}
+                  onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      applyCoupon();
+                    }
+                  }}
+                  placeholder="Coupon code"
+                  className="flex-1 px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-xs font-mono uppercase placeholder:normal-case placeholder:font-sans focus:outline-hidden focus:ring-2 focus:ring-amber-500"
+                />
+                {appliedCode ? (
+                  <button
+                    type="button"
+                    onClick={removeCoupon}
+                    className="px-3 py-2 rounded-xl border border-stone-300 dark:border-stone-700 text-stone-600 dark:text-stone-300 text-xs font-bold hover:bg-stone-100 dark:hover:bg-stone-800"
+                  >
+                    Remove
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={applyCoupon}
+                    disabled={!couponInput.trim()}
+                    className="px-4 py-2 rounded-xl bg-stone-900 dark:bg-stone-700 hover:bg-stone-800 disabled:opacity-50 text-white text-xs font-bold"
+                  >
+                    Apply
+                  </button>
+                )}
+              </div>
+
+              {quote?.codeError && (
+                <p className="text-[11px] text-rose-600 dark:text-rose-400 font-semibold">
+                  {quote.codeError}
+                </p>
+              )}
+
+              {quote?.betterAutoOffer && (
+                <p className="text-[11px] text-amber-700 dark:text-amber-300 font-semibold">
+                  Tip: &quot;{quote.betterAutoOffer.name}&quot; would save you{' '}
+                  {formatPaiseToRupees(quote.betterAutoOffer.totalSavingPaise)} without a code.
+                </p>
+              )}
+
+              {!appliedCode && quote && quote.offers.length > 0 && !quote.applied && (
+                <div className="space-y-1">
+                  {quote.offers.slice(0, 3).map((offer) => (
+                    <p
+                      key={offer.name}
+                      className="text-[11px] text-emerald-700 dark:text-emerald-300 font-semibold flex items-center gap-1.5"
+                    >
+                      <Sparkles className="w-3 h-3 shrink-0" />
+                      <span>
+                        {offer.name} — save {formatPaiseToRupees(offer.savingPaise)}
+                      </span>
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              {isQuoting && (
+                <p className="text-[10px] text-stone-400 flex items-center gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Checking offers…
+                </p>
+              )}
+            </div>
+
             {/* Delivery fee & totals breakdown */}
             <div className="border-t border-stone-200 dark:border-stone-800 pt-3 space-y-2 text-xs">
               <div className="flex justify-between text-stone-600 dark:text-stone-400">
                 <span>Subtotal</span>
                 <span className="font-semibold text-stone-900 dark:text-stone-100">
-                  {formatPaiseToRupees(subtotalPaise)}
+                  {formatPaiseToRupees(displaySubtotal)}
                 </span>
               </div>
+
+              {displayDiscount > 0 && (
+                <div className="flex justify-between text-emerald-700 dark:text-emerald-400 font-semibold">
+                  <span className="flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                    {quote?.applied ? quote.applied.name : 'Discount'}
+                  </span>
+                  <span>−{formatPaiseToRupees(displayDiscount)}</span>
+                </div>
+              )}
 
               <div className="flex justify-between text-stone-600 dark:text-stone-400">
                 <span>
                   {orderType === 'delivery' ? `Vizag Delivery (up to ${deliveryRadiusKm} km)` : 'Counter Pickup'}
                 </span>
                 <span className="font-semibold">
-                  {effectiveDeliveryFeePaise === 0 ? (
+                  {displayDeliveryFee === 0 ? (
                     <span className="text-emerald-600 font-bold">FREE</span>
                   ) : (
-                    formatPaiseToRupees(effectiveDeliveryFeePaise)
+                    formatPaiseToRupees(displayDeliveryFee)
                   )}
                 </span>
               </div>
@@ -848,9 +991,16 @@ export function CheckoutClient({ deliveryConfig }: { deliveryConfig: CheckoutDel
               <div className="border-t border-stone-200 dark:border-stone-800 pt-3 flex justify-between text-base font-black text-stone-900 dark:text-stone-100">
                 <span>Total Amount</span>
                 <span className="text-brand">
-                  {formatPaiseToRupees(effectiveTotalPaise)}
+                  {formatPaiseToRupees(displayTotal)}
                 </span>
               </div>
+
+              {displaySavings > 0 && (
+                <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                  You saved {formatPaiseToRupees(displaySavings)} on this order
+                </p>
+              )}
             </div>
 
             <div className="pt-2 text-[11px] text-stone-400 space-y-1">

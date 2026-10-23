@@ -5,6 +5,9 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { calculateStoreStatus } from '@/lib/opening-hours';
 import { calculateDeliveryFee, validateDeliveryMinimum } from '@/lib/pricing';
 import { checkDeliveryServiceability } from '@/lib/delivery';
+import { evaluateCart } from '@/lib/promotions/server';
+import type { PromotionQuote } from '@/lib/promotions/types';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { sendOwnerOrderNotificationEmail } from '@/lib/email/order-notification';
 import { createTrackingToken } from '@/lib/tracking';
 import type { Order } from '@/types/database';
@@ -184,14 +187,57 @@ export async function placeOrder(formData: CheckoutFormData): Promise<PlaceOrder
       };
     }
 
-    const deliveryFeePaise = calculateDeliveryFee(
+    let deliveryFeePaise = calculateDeliveryFee(
       recalculatedSubtotalPaise,
       data.orderType,
       settings.free_delivery_threshold_paise,
       settings.delivery_fee_paise
     );
 
-    const recalculatedTotalPaise = recalculatedSubtotalPaise + deliveryFeePaise;
+    // 6. Promotions - evaluated server-side, never trusted from the browser.
+    const promotionCode = data.promotionCode?.trim() || null;
+    const customerUserId = await getOptionalCustomerUserId();
+
+    let appliedPromotion: PromotionQuote['applied'] = null;
+    let itemDiscountPaise = 0;
+    let discountAllocation: Record<string, number> = {};
+
+    const cartLines = itemsToSnapshot.map((snapshot) => ({
+      menuItemId: snapshot.menu_item_id,
+      categoryId: dbItemMap.get(snapshot.menu_item_id)?.category_id ?? '',
+      name: snapshot.item_name_snapshot,
+      pricePaise: snapshot.item_price_paise,
+      quantity: snapshot.quantity,
+    }));
+
+    const promotionQuote = await evaluateCart({
+      lines: cartLines,
+      orderType: data.orderType,
+      deliveryFeePaise,
+      code: promotionCode,
+      phone: data.customerPhone.trim(),
+      userId: customerUserId,
+    });
+
+    // A code the customer typed must work - never silently charge full price.
+    if (promotionCode && promotionQuote?.codeError) {
+      return { success: false, error: promotionQuote.codeError };
+    }
+
+    if (promotionQuote?.applied) {
+      appliedPromotion = promotionQuote.applied;
+      itemDiscountPaise = promotionQuote.applied.itemDiscountPaise;
+      discountAllocation = promotionQuote.applied.allocation;
+
+      if (promotionQuote.applied.freeDelivery) {
+        deliveryFeePaise = 0;
+      }
+    }
+
+    const recalculatedTotalPaise = Math.max(
+      0,
+      recalculatedSubtotalPaise - itemDiscountPaise + deliveryFeePaise
+    );
 
     // 5. Generate Human-Readable Order Number (e.g. JOSH-20261020-4921)
     const now = new Date();
@@ -221,6 +267,19 @@ export async function placeOrder(formData: CheckoutFormData): Promise<PlaceOrder
 
     const orderPayload = {
       ...baseOrderPayload,
+      discount_paise: itemDiscountPaise,
+      promotion_id: appliedPromotion?.promotionId ?? null,
+      promotion_code: appliedPromotion?.code ?? promotionCode,
+      discount_breakdown: appliedPromotion
+        ? {
+            promotionId: appliedPromotion.promotionId,
+            name: appliedPromotion.name,
+            code: appliedPromotion.code,
+            freeDelivery: appliedPromotion.freeDelivery,
+            allocation: appliedPromotion.allocation,
+          }
+        : null,
+      user_id: customerUserId,
       ...(data.orderType === 'delivery' && data.deliveryPincode
         ? { delivery_pincode: data.deliveryPincode }
         : {}),
@@ -264,6 +323,7 @@ export async function placeOrder(formData: CheckoutFormData): Promise<PlaceOrder
     const orderItemsRows = itemsToSnapshot.map((item) => ({
       ...item,
       order_id: newOrder.id,
+      discount_paise: discountAllocation[item.menu_item_id] ?? 0,
     }));
 
     const { error: itemsInsertError } = await adminSupabase
@@ -272,10 +332,36 @@ export async function placeOrder(formData: CheckoutFormData): Promise<PlaceOrder
 
     if (itemsInsertError) {
       console.error('Failed to insert order items snapshot:', itemsInsertError);
-      // Order header is already created, so we log and proceed
+      // The order header is already created, so we log and proceed.
     }
 
-    // 8. Send Transactional Email Notification to Owner (Resend)
+    // 8. Redeem the promotion atomically. The database enforces the total limit
+    //    and budget cap under a row lock; if it fails we roll the order back so
+    //    nobody gets a discount without a recorded redemption.
+    if (appliedPromotion) {
+      const { data: redeemed, error: redeemError } = await adminSupabase.rpc('redeem_promotion', {
+        p_promotion_id: appliedPromotion.promotionId,
+        p_order_id: newOrder.id,
+        p_phone: data.customerPhone.trim(),
+        p_user_id: customerUserId,
+        p_discount_paise: appliedPromotion.totalSavingPaise,
+        p_code: appliedPromotion.code,
+      });
+
+      if (redeemError || redeemed !== true) {
+        console.warn('Promotion redemption rejected:', redeemError?.message ?? 'limit reached');
+        await adminSupabase.from('order_items').delete().eq('order_id', newOrder.id);
+        await adminSupabase.from('orders').delete().eq('id', newOrder.id);
+
+        return {
+          success: false,
+          error:
+            'Sorry, that offer has just reached its limit. Please place the order again without the code.',
+        };
+      }
+    }
+
+    // 9. Send Transactional Email Notification to Owner (Resend)
     const { data: fullOrder } = await adminSupabase
       .from('orders')
       .select('*')
@@ -298,5 +384,19 @@ export async function placeOrder(formData: CheckoutFormData): Promise<PlaceOrder
   } catch (error) {
     console.error('Unexpected error placing order:', error);
     return { success: false, error: 'An unexpected error occurred. Please try again.' };
+  }
+}
+
+/**
+ * The signed-in customer's id, when they have an account. Guests return null -
+ * this must never block an order.
+ */
+async function getOptionalCustomerUserId(): Promise<string | null> {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data } = await supabase.auth.getUser();
+    return data.user?.id ?? null;
+  } catch {
+    return null;
   }
 }
