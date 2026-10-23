@@ -11,6 +11,7 @@ import {
   LogOut,
   ExternalLink,
   Flame,
+  Tag,
 } from 'lucide-react';
 
 /**
@@ -43,6 +44,7 @@ export default function StaffShell({ children }: { children: React.ReactNode }) 
   const navItems = [
     { href: '/admin/orders', label: 'Kitchen Orders', icon: ChefHat },
     { href: '/admin/menu', label: 'Menu Manager', icon: Utensils },
+    { href: '/admin/offers', label: 'Offers', icon: Tag },
     { href: '/admin/settings', label: 'Settings', icon: Settings },
   ];
 
