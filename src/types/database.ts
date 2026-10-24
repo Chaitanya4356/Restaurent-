@@ -59,6 +59,13 @@ export interface Order {
   payment_method: PaymentMethod;
   payment_status: PaymentStatus;
   payment_id: string | null;
+  /** Promotion applied at checkout (see the promotions engine). */
+  discount_paise?: number;
+  promotion_id?: string | null;
+  promotion_code?: string | null;
+  discount_breakdown?: Json | null;
+  /** Customer account that placed the order (null for guests). */
+  user_id?: string | null;
   created_at: string;
   updated_at: string;
 }

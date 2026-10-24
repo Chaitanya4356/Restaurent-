@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useCart } from '@/context/CartContext';
 import { OpenStatusBadge } from '@/components/OpenStatusBadge';
-import { ShoppingBag, Phone, UtensilsCrossed } from 'lucide-react';
+import { ShoppingBag, Phone, UtensilsCrossed, User } from 'lucide-react';
 import { formatPaiseToRupees } from '@/lib/utils';
 
 interface HeaderProps {
@@ -92,6 +92,16 @@ export function Header({
               className="px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-stone-700 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition"
             >
               Menu
+            </Link>
+
+            {/* Account */}
+            <Link
+              href="/account"
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold text-stone-700 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition"
+              aria-label="My account and order history"
+            >
+              <User className="w-4 h-4" />
+              <span className="hidden lg:inline">Account</span>
             </Link>
 
             {/* Cart Button */}
