@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { ArrowLeft, CheckCircle2, ShieldCheck, ShoppingBag } from 'lucide-react';
 import { getCustomerUser, safeNextPath } from '@/lib/auth/customer';
 import { GoogleSignInButton } from '@/components/GoogleSignInButton';
+import { EmailSignInForm } from '@/components/EmailSignInForm';
 
 export const metadata: Metadata = {
   title: 'Sign in | Josh Restaurant',
@@ -49,9 +50,13 @@ export default async function CustomerLoginPage({ searchParams }: LoginPageProps
       <div className="p-6 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-md space-y-4">
         <GoogleSignInButton nextPath={nextPath} />
 
-        <p className="text-[11px] text-stone-500 text-center">
-          No password to remember. We only get your name and email from Google.
-        </p>
+        <div className="flex items-center gap-3">
+          <span className="h-px flex-1 bg-stone-200 dark:bg-stone-800" />
+          <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">or</span>
+          <span className="h-px flex-1 bg-stone-200 dark:bg-stone-800" />
+        </div>
+
+        <EmailSignInForm nextPath={nextPath} />
 
         <div className="border-t border-stone-100 dark:border-stone-800 pt-4 space-y-2 text-[11px] text-stone-500">
           <p className="flex items-start gap-1.5">
