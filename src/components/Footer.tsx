@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { MapPin, Phone, Clock, Bike, ShieldCheck, Heart } from 'lucide-react';
 import { formatPaiseToRupees, formatTimeTo12h, minusMinutesFromTime } from '@/lib/utils';
 
@@ -10,6 +11,7 @@ interface FooterProps {
   phone?: string;
   address?: string;
   city?: string;
+  logoUrl?: string | null;
   openingTime?: string;
   closingTime?: string;
   orderCutoffMinutes?: number;
@@ -24,6 +26,7 @@ export function Footer({
   phone = '+91 98765 43210',
   address = 'Beach Road, Siripuram, Visakhapatnam, Andhra Pradesh 530003',
   city = 'Visakhapatnam',
+  logoUrl = null,
   openingTime = '07:00:00',
   closingTime = '23:00:00',
   orderCutoffMinutes = 20,
@@ -41,6 +44,15 @@ export function Footer({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {/* Brand Col */}
           <div className="space-y-4">
+            {logoUrl && (
+              <Image
+                src={logoUrl}
+                alt={`${restaurantName} logo`}
+                width={112}
+                height={112}
+                className="w-20 h-20 rounded-2xl object-cover bg-black border border-stone-700/60 shadow-lg"
+              />
+            )}
             <h3 className="text-2xl font-black text-white tracking-tight">
               {restaurantName}
             </h3>

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useCart } from '@/context/CartContext';
 import { OpenStatusBadge } from '@/components/OpenStatusBadge';
 import { ShoppingBag, Phone, UtensilsCrossed } from 'lucide-react';
@@ -10,6 +11,7 @@ import { formatPaiseToRupees } from '@/lib/utils';
 interface HeaderProps {
   restaurantName?: string;
   phone?: string;
+  logoUrl?: string | null;
   isAcceptingOrders?: boolean;
   openingTime?: string;
   closingTime?: string;
@@ -19,6 +21,7 @@ interface HeaderProps {
 export function Header({
   restaurantName = 'Josh',
   phone = '+91 98765 43210',
+  logoUrl = null,
   isAcceptingOrders = true,
   openingTime = '07:00:00',
   closingTime = '23:00:00',
@@ -36,9 +39,20 @@ export function Header({
               href="/"
               className="flex items-center gap-2.5 group focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-500 rounded-lg p-1"
             >
-              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center text-white shadow-md shadow-black/20 group-hover:scale-105 transition-transform">
-                <UtensilsCrossed className="w-5 h-5 sm:w-6 sm:h-6" />
-              </div>
+              {logoUrl ? (
+                <Image
+                  src={logoUrl}
+                  alt={`${restaurantName} logo`}
+                  width={48}
+                  height={48}
+                  priority
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl object-cover bg-black shadow-md group-hover:scale-105 transition-transform"
+                />
+              ) : (
+                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center text-white shadow-md shadow-black/20 group-hover:scale-105 transition-transform">
+                  <UtensilsCrossed className="w-5 h-5 sm:w-6 sm:h-6" />
+                </div>
+              )}
               <div className="flex flex-col">
                 <span className="text-xl sm:text-2xl font-black tracking-tight text-stone-900 dark:text-stone-100 leading-tight">
                   {restaurantName}

@@ -72,6 +72,8 @@ export function AdminSettingsManager({
   const [phone, setPhone] = useState(initialSettings.phone_number);
   const [address, setAddress] = useState(initialSettings.address);
   const [brandColor, setBrandColor] = useState(initialSettings.brand_color_primary);
+  const [logoUrl, setLogoUrl] = useState(initialSettings.brand_logo_url || '');
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   // UPI / online payment details
   const [upiId, setUpiId] = useState(initialSettings.upi_id || '');
@@ -91,6 +93,23 @@ export function AdminSettingsManager({
 
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingLogo(true);
+    const result = await uploadPublicImage(file, 'brand');
+    setIsUploadingLogo(false);
+    e.target.value = '';
+
+    if (result.error || !result.url) {
+      alert('Logo upload failed: ' + (result.error || 'unknown error'));
+      return;
+    }
+
+    setLogoUrl(result.url);
+  };
 
   const handleQrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -227,6 +246,7 @@ export function AdminSettingsManager({
       phone_number: phone.trim(),
       address: address.trim(),
       brand_color_primary: brandColor.trim(),
+      brand_logo_url: logoUrl.trim() || null,
       upi_id: upiId.trim() || null,
       upi_phone: upiPhone.trim() || null,
       upi_qr_url: upiQrUrl.trim() || null,
@@ -627,6 +647,53 @@ export function AdminSettingsManager({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="block text-xs font-bold text-stone-700 dark:text-stone-300">
+                Restaurant Logo
+              </label>
+              <div className="flex items-center gap-3">
+                {logoUrl ? (
+                  <Image
+                    src={logoUrl}
+                    alt="Current logo"
+                    width={64}
+                    height={64}
+                    unoptimized
+                    className="w-16 h-16 rounded-xl object-cover bg-black border border-stone-200 dark:border-stone-700"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-xl border border-dashed border-stone-300 dark:border-stone-700 flex items-center justify-center text-stone-400">
+                    <Store className="w-6 h-6" />
+                  </div>
+                )}
+                <div className="flex-1 space-y-1">
+                  <label className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-stone-200 dark:border-stone-700 text-xs font-semibold cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800 transition">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{isUploadingLogo ? 'Uploading…' : logoUrl ? 'Change logo' : 'Upload logo'}</span>
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                      onChange={handleLogoUpload}
+                      disabled={isUploadingLogo}
+                      className="hidden"
+                    />
+                  </label>
+                  {logoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setLogoUrl('')}
+                      className="block text-[10px] font-semibold text-rose-600 hover:underline"
+                    >
+                      Remove logo
+                    </button>
+                  )}
+                  <p className="text-[10px] text-stone-500">
+                    Square PNG works best (e.g. 512×512). Shown in the header and footer. Press Save to apply.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-bold text-stone-700 dark:text-stone-300">
                 Contact Phone (Click-to-Call)
               </label>
               <input
@@ -636,7 +703,9 @@ export function AdminSettingsManager({
                 className="w-full px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-sm focus:outline-hidden"
               />
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="block text-xs font-bold text-stone-700 dark:text-stone-300">
                 Primary Brand Color (Hex)
@@ -656,18 +725,18 @@ export function AdminSettingsManager({
                 />
               </div>
             </div>
-          </div>
 
-          <div className="space-y-1">
-            <label className="block text-xs font-bold text-stone-700 dark:text-stone-300">
-              Restaurant Display Address
-            </label>
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-sm focus:outline-hidden"
-            />
+            <div className="space-y-1">
+              <label className="block text-xs font-bold text-stone-700 dark:text-stone-300">
+                Restaurant Display Address
+              </label>
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-sm focus:outline-hidden"
+              />
+            </div>
           </div>
         </div>
 

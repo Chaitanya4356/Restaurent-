@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import type { Metadata } from 'next';
 import { CartProvider } from '@/context/CartContext';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -22,6 +23,25 @@ import { getPublicSettings } from '@/lib/settings';
  */
 export const dynamic = 'force-dynamic';
 
+/**
+ * Uses the owner's uploaded logo as the browser tab icon, so the branding is
+ * consistent from the tab to the page.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getPublicSettings();
+
+  if (settings.brand_logo_url) {
+    return {
+      icons: {
+        icon: settings.brand_logo_url,
+        apple: settings.brand_logo_url,
+      },
+    };
+  }
+
+  return {};
+}
+
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
   const settings = await getPublicSettings();
 
@@ -43,6 +63,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
         <Header
           restaurantName={settings.restaurant_name}
           phone={settings.phone_number}
+          logoUrl={settings.brand_logo_url ?? null}
           isAcceptingOrders={settings.is_accepting_orders}
           openingTime={settings.opening_time}
           closingTime={settings.closing_time}
@@ -57,6 +78,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
           phone={settings.phone_number}
           address={settings.address}
           city={settings.city}
+          logoUrl={settings.brand_logo_url ?? null}
           openingTime={settings.opening_time}
           closingTime={settings.closing_time}
           orderCutoffMinutes={settings.order_cutoff_minutes}

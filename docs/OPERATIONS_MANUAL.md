@@ -59,12 +59,29 @@ When a customer places an order:
    - `Out for Delivery` / `Ready for Pickup` $\rightarrow$ Food packed, delivery agent departs or bag placed on pickup counter.
    - `Complete Order` $\rightarrow$ Food handed over; order moves to completed archive.
 
-### 3. Managing Sold Out Dishes (Rush Hours)If an item sells out during peak hours:
+### 3. Managing Sold Out Dishes (Rush Hours)
+
+If an item sells out during peak hours:
 1. Navigate to **Menu Management** (`/admin/menu`).
 2. Find the dish (e.g., *Josh Special Chicken Biryani*).
 3. Toggle the switch to **Sold Out**.
 4. The dish immediately displays a red **"Sold Out"** badge on the public menu and the "Add to Order" button is instantly disabled.
 5. When a fresh batch is prepared, toggle it back to **Available**.
+
+---
+
+## 🎨 Logo & Branding
+
+**Admin → Settings → Store Contact & Dynamic Branding → Restaurant Logo.**
+
+- Upload a **square** image (PNG/JPG/WebP/SVG, max 5 MB). 512×512 or larger is ideal.
+- It is used in the **header**, the **footer**, and as the **browser tab icon**.
+- Press **Save & Update Settings** — it appears on the next page load, no redeploy.
+- **Remove logo** falls back to the built-in utensils mark.
+
+> Tip: a wide logo with tagline text becomes unreadable at header size (~44 px).
+> Upload the compact square mark for the header. The full lockup looks best in
+> the footer.
 
 ---
 

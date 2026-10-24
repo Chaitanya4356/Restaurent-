@@ -145,6 +145,10 @@
   - Both paths feed the same `applyCoordinates()` helper: coordinates stored on the form, address + pincode filled in via reverse geocoding, then the shared distance/ETA card
   - Map is loaded with `next/dynamic` (ssr: false) since Leaflet touches `window`
   - 1 new E2E test (picker opens, Leaflet renders, confirming applies the location) - 22 E2E passing
+- [x] **Phase 21 – Dynamic Brand Logo:** Completed
+  - Owner-uploadable logo in `/admin/settings` (uses the existing `brand_logo_url` column - no migration needed)
+  - Applied in the customer header (replacing the utensils tile), the footer brand column, and as the browser tab icon via `generateMetadata`
+  - Falls back to the built-in mark when no logo is uploaded; remove-logo supported
 
 ---
 
