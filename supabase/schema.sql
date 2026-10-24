@@ -60,6 +60,8 @@ CREATE TABLE IF NOT EXISTS public.restaurant_settings (
     upi_phone TEXT,
     upi_qr_url TEXT,
     upi_payee_name TEXT,
+    -- Dedicated browser tab icon (falls back to brand_logo_url)
+    brand_favicon_url TEXT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -271,6 +273,10 @@ ALTER TABLE public.orders
 -- Owner-configurable delivery radius (see migrations/003_delivery_radius.sql)
 ALTER TABLE public.restaurant_settings
     ADD COLUMN IF NOT EXISTS delivery_radius_km INTEGER NOT NULL DEFAULT 20;
+
+-- Dedicated favicon (see migrations/006_favicon.sql)
+ALTER TABLE public.restaurant_settings
+    ADD COLUMN IF NOT EXISTS brand_favicon_url TEXT;
 
 -- Outlet location + ETA estimation (see migrations/004_delivery_eta.sql)
 ALTER TABLE public.restaurant_settings

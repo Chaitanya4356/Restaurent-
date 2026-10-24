@@ -21,6 +21,7 @@ import {
   MapPin,
   Plus,
   X,
+  Sparkles,
 } from 'lucide-react';
 
 interface AdminSettingsManagerProps {
@@ -74,6 +75,8 @@ export function AdminSettingsManager({
   const [brandColor, setBrandColor] = useState(initialSettings.brand_color_primary);
   const [logoUrl, setLogoUrl] = useState(initialSettings.brand_logo_url || '');
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [faviconUrl, setFaviconUrl] = useState(initialSettings.brand_favicon_url || '');
+  const [isUploadingFavicon, setIsUploadingFavicon] = useState(false);
 
   // UPI / online payment details
   const [upiId, setUpiId] = useState(initialSettings.upi_id || '');
@@ -93,6 +96,23 @@ export function AdminSettingsManager({
 
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  const handleFaviconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingFavicon(true);
+    const result = await uploadPublicImage(file, 'brand');
+    setIsUploadingFavicon(false);
+    e.target.value = '';
+
+    if (result.error || !result.url) {
+      alert('Favicon upload failed: ' + (result.error || 'unknown error'));
+      return;
+    }
+
+    setFaviconUrl(result.url);
+  };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -247,6 +267,7 @@ export function AdminSettingsManager({
       address: address.trim(),
       brand_color_primary: brandColor.trim(),
       brand_logo_url: logoUrl.trim() || null,
+      brand_favicon_url: faviconUrl.trim() || null,
       upi_id: upiId.trim() || null,
       upi_phone: upiPhone.trim() || null,
       upi_qr_url: upiQrUrl.trim() || null,
@@ -644,7 +665,7 @@ export function AdminSettingsManager({
             <span>Store Contact & Dynamic Branding</span>
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-1">
               <label className="block text-xs font-bold text-stone-700 dark:text-stone-300">
                 Restaurant Logo
@@ -687,6 +708,55 @@ export function AdminSettingsManager({
                   )}
                   <p className="text-[10px] text-stone-500">
                     Square PNG works best (e.g. 512×512). Shown in the header and footer. Press Save to apply.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-bold text-stone-700 dark:text-stone-300">
+                Browser Tab Icon (Favicon)
+              </label>
+              <div className="flex items-center gap-3">
+                {faviconUrl ? (
+                  <Image
+                    src={faviconUrl}
+                    alt="Current favicon"
+                    width={64}
+                    height={64}
+                    unoptimized
+                    className="w-16 h-16 rounded-xl object-cover bg-black border border-stone-200 dark:border-stone-700"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-xl border border-dashed border-stone-300 dark:border-stone-700 flex items-center justify-center text-stone-400">
+                    <Sparkles className="w-6 h-6" />
+                  </div>
+                )}
+                <div className="flex-1 space-y-1">
+                  <label className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-stone-200 dark:border-stone-700 text-xs font-semibold cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800 transition">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>
+                      {isUploadingFavicon ? 'Uploading…' : faviconUrl ? 'Change icon' : 'Upload icon'}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                      onChange={handleFaviconUpload}
+                      disabled={isUploadingFavicon}
+                      className="hidden"
+                    />
+                  </label>
+                  {faviconUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setFaviconUrl('')}
+                      className="block text-[10px] font-semibold text-rose-600 hover:underline"
+                    >
+                      Remove icon
+                    </button>
+                  )}
+                  <p className="text-[10px] text-stone-500">
+                    Small square mark (256×256+). Falls back to the logo if empty.
                   </p>
                 </div>
               </div>

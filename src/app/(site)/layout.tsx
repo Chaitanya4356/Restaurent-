@@ -29,12 +29,15 @@ export const dynamic = 'force-dynamic';
  */
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getPublicSettings();
+  // A dedicated favicon wins; otherwise the logo doubles as the tab icon.
+  const icon = settings.brand_favicon_url || settings.brand_logo_url;
 
-  if (settings.brand_logo_url) {
+  if (icon) {
     return {
       icons: {
-        icon: settings.brand_logo_url,
-        apple: settings.brand_logo_url,
+        icon,
+        shortcut: icon,
+        apple: icon,
       },
     };
   }

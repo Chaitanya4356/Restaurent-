@@ -99,6 +99,8 @@ export interface RestaurantSettings {
   avg_speed_kmh?: number;
   brand_color_primary: string;
   brand_logo_url: string | null;
+  /** Browser tab icon (falls back to the logo when empty). */
+  brand_favicon_url?: string | null;
   /** UPI collection details - owner-configurable, shown to online-payment customers. */
   upi_id?: string | null;
   upi_phone?: string | null;

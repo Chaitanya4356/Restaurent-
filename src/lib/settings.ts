@@ -34,6 +34,7 @@ export const DEFAULT_SETTINGS: RestaurantSettings = {
   avg_speed_kmh: 18,
   brand_color_primary: '#E65100',
   brand_logo_url: null,
+  brand_favicon_url: null,
   upi_id: null,
   upi_phone: null,
   upi_qr_url: null,
