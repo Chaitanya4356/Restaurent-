@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { getDeliveryPincodes } from '@/lib/delivery-server';
 import { getPublicSettings } from '@/lib/settings';
 import { isValidCoordinates } from '@/lib/geo';
+import { getCustomerUser } from '@/lib/auth/customer';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { CheckoutClient, type CheckoutDeliveryConfig } from './CheckoutClient';
 
 export const metadata: Metadata = {
@@ -20,7 +22,34 @@ export const dynamic = 'force-dynamic';
  * The authoritative checks still run server-side inside placeOrder().
  */
 export default async function CheckoutPage() {
-  const [pincodes, settings] = await Promise.all([getDeliveryPincodes(), getPublicSettings()]);
+  const [pincodes, settings, user] = await Promise.all([
+    getDeliveryPincodes(),
+    getPublicSettings(),
+    getCustomerUser(),
+  ]);
+
+  // Signed-in customers start with their saved name / phone / address.
+  let defaults: { name: string; phone: string; address: string } | null = null;
+  if (user) {
+    try {
+      const supabase = await createServerSupabaseClient();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, phone, default_address')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profile) {
+        defaults = {
+          name: profile.full_name ?? user.name ?? '',
+          phone: profile.phone ?? '',
+          address: profile.default_address ?? '',
+        };
+      }
+    } catch {
+      // never block checkout on a profile lookup
+    }
+  }
 
   const outlet =
     settings.outlet_latitude != null && settings.outlet_longitude != null
@@ -35,5 +64,5 @@ export default async function CheckoutPage() {
     avgSpeedKmh: settings.avg_speed_kmh ?? 18,
   };
 
-  return <CheckoutClient deliveryConfig={deliveryConfig} />;
+  return <CheckoutClient deliveryConfig={deliveryConfig} defaults={defaults} />;
 }

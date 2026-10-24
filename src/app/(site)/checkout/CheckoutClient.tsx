@@ -58,7 +58,13 @@ export interface CheckoutDeliveryConfig {
   avgSpeedKmh: number;
 }
 
-export function CheckoutClient({ deliveryConfig }: { deliveryConfig: CheckoutDeliveryConfig }) {
+export function CheckoutClient({
+  deliveryConfig,
+  defaults = null,
+}: {
+  deliveryConfig: CheckoutDeliveryConfig;
+  defaults?: { name: string; phone: string; address: string } | null;
+}) {
   const {
     allowedPincodes,
     radiusKm,
@@ -98,9 +104,9 @@ export function CheckoutClient({ deliveryConfig }: { deliveryConfig: CheckoutDel
     resolver: zodResolver(checkoutCustomerFieldsSchema) as unknown as Resolver<CheckoutCustomerFields>,
     defaultValues: {
       orderType: 'delivery',
-      customerName: '',
-      customerPhone: '',
-      deliveryAddress: '',
+      customerName: defaults?.name ?? '',
+      customerPhone: defaults?.phone ?? '',
+      deliveryAddress: defaults?.address ?? '',
       deliveryPincode: '',
       preferredTime: 'ASAP',
       customerNotes: '',

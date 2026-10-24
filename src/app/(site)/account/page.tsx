@@ -1,76 +1,37 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowLeft, Receipt, Clock, MapPin, Sparkles } from 'lucide-react';
+import { ArrowLeft, Receipt, ShoppingBag, User } from 'lucide-react';
 import { requireCustomer } from '@/lib/auth/customer';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { createTrackingToken } from '@/lib/tracking';
 import { formatPaiseToRupees } from '@/lib/utils';
-import { ReorderButton } from '@/components/ReorderButton';
+import { ProfileForm } from '@/components/ProfileForm';
 import { SignOutButton } from '@/components/SignOutButton';
-import type { MenuItem, Order, OrderItem } from '@/types/database';
 
 export const metadata: Metadata = {
-  title: 'My orders | Josh Restaurant',
+  title: 'My account | Josh Restaurant',
   robots: { index: false, follow: false },
 };
 
 export const dynamic = 'force-dynamic';
 
-const STATUS_STYLES: Record<string, string> = {
-  new: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
-  preparing: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300',
-  ready: 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300',
-  completed: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
-  cancelled: 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300',
-};
-
-type OrderWithItems = Order & { order_items: OrderItem[] };
-
 export default async function AccountPage() {
   const user = await requireCustomer('/account');
 
-  // Uses the cookie-scoped client, so Postgres RLS guarantees the customer can
-  // only ever see their own orders.
+  // Cookie-scoped client: RLS limits everything here to this customer.
   const supabase = await createServerSupabaseClient();
 
-  const { data: ordersData, error } = await supabase
-    .from('orders')
-    .select('*, order_items(*)')
-    .order('created_at', { ascending: false })
-    .limit(30);
+  const [{ data: profile }, { data: orderRows }] = await Promise.all([
+    supabase.from('profiles').select('full_name, phone, default_address').eq('id', user.id).maybeSingle(),
+    supabase.from('orders').select('total_paise').eq('user_id', user.id),
+  ]);
 
-  if (error) {
-    console.error('Failed to load customer orders:', error);
-  }
+  const orders = orderRows ?? [];
+  const totalSpent = orders.reduce((sum, order) => sum + (order.total_paise ?? 0), 0);
 
-  const orders = (ordersData ?? []) as OrderWithItems[];
-
-  // Current menu items, so "Order again" uses live prices/availability
-  const menuItemIds = [
-    ...new Set(
-      orders.flatMap((order) => (order.order_items ?? []).map((item) => item.menu_item_id))
-    ),
-  ].filter(Boolean) as string[];
-
-  let menuById = new Map<string, MenuItem>();
-  if (menuItemIds.length > 0) {
-    const { data: menuItems } = await supabase
-      .from('menu_items')
-      .select('*')
-      .in('id', menuItemIds)
-      .eq('is_active', true)
-      .eq('is_sold_out', false);
-
-    menuById = new Map(((menuItems ?? []) as MenuItem[]).map((item) => [item.id, item]));
-  }
-
-  const firstName = user.name?.split(' ')[0] || user.email?.split('@')[0] || 'there';
-  const totalSpent = orders
-    .filter((order) => order.status !== 'cancelled')
-    .reduce((sum, order) => sum + order.total_paise, 0);
+  const displayName = profile?.full_name || user.name || user.email?.split('@')[0] || 'there';
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8 pb-16">
+    <div className="max-w-2xl mx-auto space-y-6 pb-16">
       <div className="flex items-center justify-between border-b border-stone-200 dark:border-stone-800 pb-4">
         <Link
           href="/menu"
@@ -82,129 +43,70 @@ export default async function AccountPage() {
         <SignOutButton />
       </div>
 
-      <div className="space-y-1">
-        <h1 className="text-2xl sm:text-3xl font-black text-stone-900 dark:text-stone-100 tracking-tight">
-          Hi {firstName} 👋
-        </h1>
-        <p className="text-sm text-stone-500">
-          {orders.length === 0
-            ? 'Your orders will appear here after your first order.'
-            : `${orders.length} order${orders.length === 1 ? '' : 's'} · ${formatPaiseToRupees(
-                totalSpent
-              )} spent with us`}
-        </p>
+      {/* Greeting */}
+      <div className="flex items-center gap-4">
+        <div className="w-14 h-14 rounded-2xl bg-brand/10 dark:bg-amber-950/60 text-brand flex items-center justify-center">
+          <User className="w-7 h-7" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-black text-stone-900 dark:text-stone-100 tracking-tight">
+            Hi {displayName.split(' ')[0]} 👋
+          </h1>
+          <p className="text-xs text-stone-500">{user.email}</p>
+        </div>
       </div>
 
-      {orders.length === 0 ? (
-        <div className="text-center py-16 bg-white dark:bg-stone-900 rounded-3xl border border-stone-200 dark:border-stone-800">
-          <Receipt className="w-10 h-10 text-stone-300 dark:text-stone-700 mx-auto mb-3" />
-          <h2 className="font-bold text-stone-800 dark:text-stone-200">No orders yet</h2>
-          <p className="text-xs text-stone-500 mt-1 mb-4">
-            Order once and it will show up here with a one-tap reorder.
+      {/* My Orders shortcut - the dedicated screen */}
+      <Link
+        href="/my-orders"
+        className="block p-5 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xs hover:border-amber-400 transition group"
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center">
+              <Receipt className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-bold text-sm text-stone-900 dark:text-stone-100 group-hover:text-amber-700 transition">
+                My Orders
+              </p>
+              <p className="text-[11px] text-stone-500">
+                {orders.length === 0
+                  ? 'No orders yet'
+                  : `${orders.length} order${orders.length === 1 ? '' : 's'} · ${formatPaiseToRupees(
+                      totalSpent
+                    )} spent`}
+              </p>
+            </div>
+          </div>
+          <span className="text-stone-300 dark:text-stone-600 group-hover:text-amber-500 transition">→</span>
+        </div>
+      </Link>
+
+      {/* Profile details */}
+      <div className="p-5 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xs space-y-4">
+        <div>
+          <h2 className="text-sm font-bold text-stone-900 dark:text-stone-100">Your details</h2>
+          <p className="text-[11px] text-stone-500">
+            New orders start with these details, so checkout takes seconds.
           </p>
-          <Link
-            href="/menu"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand hover:bg-brand-dark text-white font-bold text-xs shadow-md transition"
-          >
-            Browse the menu
-          </Link>
         </div>
-      ) : (
-        <div className="space-y-4">
-          {orders.map((order) => {
-            const items = order.order_items ?? [];
-            const reorderItems = items
-              .map((item) => {
-                const menuItem = item.menu_item_id ? menuById.get(item.menu_item_id) : undefined;
-                return menuItem ? { item: menuItem, quantity: item.quantity } : null;
-              })
-              .filter((entry): entry is { item: MenuItem; quantity: number } => entry !== null);
 
-            const trackHref = `/order-confirmation/${order.order_number}/${createTrackingToken(
-              order.id
-            )}`;
+        <ProfileForm
+          initialName={profile?.full_name ?? user.name ?? ''}
+          initialPhone={profile?.phone ?? ''}
+          initialAddress={profile?.default_address ?? ''}
+        />
+      </div>
 
-            return (
-              <div
-                key={order.id}
-                className="p-5 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xs space-y-3"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <p className="font-mono font-black text-sm text-stone-900 dark:text-stone-100">
-                      #{order.order_number}
-                    </p>
-                    <p className="text-[11px] text-stone-400 flex items-center gap-1 mt-0.5">
-                      <Clock className="w-3 h-3" />
-                      {new Date(order.created_at).toLocaleString('en-IN', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        timeZone: 'Asia/Kolkata',
-                      })}
-                      <span className="mx-1">·</span>
-                      {order.order_type === 'delivery' ? (
-                        <>
-                          <MapPin className="w-3 h-3" /> Delivery
-                        </>
-                      ) : (
-                        'Pickup'
-                      )}
-                    </p>
-                  </div>
-
-                  <span
-                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
-                      STATUS_STYLES[order.status] ?? ''
-                    }`}
-                  >
-                    {order.status}
-                  </span>
-                </div>
-
-                <ul className="space-y-1 text-xs text-stone-600 dark:text-stone-300">
-                  {items.map((item) => (
-                    <li key={item.id} className="flex justify-between gap-2">
-                      <span>
-                        {item.quantity}× {item.item_name_snapshot}
-                      </span>
-                      <span>{formatPaiseToRupees(item.subtotal_paise)}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-stone-100 dark:border-stone-800 pt-3 text-xs">
-                  <div className="space-y-0.5">
-                    {(order.discount_paise ?? 0) > 0 && (
-                      <p className="text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                        <Sparkles className="w-3 h-3" />
-                        Saved {formatPaiseToRupees(order.discount_paise ?? 0)}
-                        {order.promotion_code ? ` · ${order.promotion_code}` : ''}
-                      </p>
-                    )}
-                    <p className="font-black text-sm text-stone-900 dark:text-stone-100">
-                      {formatPaiseToRupees(order.total_paise)}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Link
-                      href={`/account/orders/${order.order_number}`}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-200 text-[11px] font-bold hover:border-amber-500 transition"
-                    >
-                      <Receipt className="w-3 h-3" />
-                      <span>View status</span>
-                    </Link>
-                    <ReorderButton items={reorderItems} />
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {/* Browse menu */}
+      <Link
+        href="/menu"
+        className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl border border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-200 font-bold text-sm hover:border-amber-500 transition"
+      >
+        <ShoppingBag className="w-4 h-4" />
+        <span>Browse the menu</span>
+      </Link>
     </div>
   );
 }

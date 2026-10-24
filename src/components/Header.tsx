@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useCart } from '@/context/CartContext';
 import { OpenStatusBadge } from '@/components/OpenStatusBadge';
-import { ShoppingBag, Phone, UtensilsCrossed, User } from 'lucide-react';
+import { ShoppingBag, Phone, UtensilsCrossed, User, Receipt } from 'lucide-react';
 import { formatPaiseToRupees } from '@/lib/utils';
 
 interface HeaderProps {
@@ -94,11 +94,21 @@ export function Header({
               Menu
             </Link>
 
+            {/* My Orders */}
+            <Link
+              href="/my-orders"
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold text-stone-700 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition"
+              aria-label="My orders"
+            >
+              <Receipt className="w-4 h-4" />
+              <span className="hidden lg:inline">My Orders</span>
+            </Link>
+
             {/* Account */}
             <Link
               href="/account"
               className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold text-stone-700 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition"
-              aria-label="My account and order history"
+              aria-label="My account"
             >
               <User className="w-4 h-4" />
               <span className="hidden lg:inline">Account</span>
