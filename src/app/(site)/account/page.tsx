@@ -191,7 +191,7 @@ export default async function AccountPage() {
 
                   <div className="flex items-center gap-2">
                     <Link
-                      href={trackHref}
+                      href={`/account/orders/${order.order_number}`}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-200 text-[11px] font-bold hover:border-amber-500 transition"
                     >
                       <Receipt className="w-3 h-3" />

@@ -41,11 +41,26 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
+    // Status history for the customer timeline (best effort - may be pre-migration)
+    let events: Array<{ status: string; created_at: string; note: string | null }> = [];
+    try {
+      const { data: eventRows, error: eventError } = await supabase
+        .from('order_status_events')
+        .select('status, created_at, note')
+        .eq('order_id', data.id)
+        .order('created_at', { ascending: true });
+
+      if (!eventError && eventRows) events = eventRows;
+    } catch {
+      // ignore - the timeline falls back to the order's created_at
+    }
+
     return NextResponse.json(
       {
         status: data.status,
         paymentStatus: data.payment_status,
         updatedAt: data.updated_at,
+        events,
       },
       { headers: { 'Cache-Control': 'no-store' } }
     );

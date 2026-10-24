@@ -9,8 +9,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Formats a Postgres `time` value (e.g. "07:00:00") into a 12-hour label
- * ("7:00 AM"). Deterministic - no locale/timezone surprises between server
+ * Formats a Postgres `time` value (e.g. "07:00:00") into a 12-hour label * ("7:00 AM"). Deterministic - no locale/timezone surprises between server
  * and client renders.
  */
 export function formatTimeTo12h(time: string): string {

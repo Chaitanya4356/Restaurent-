@@ -37,8 +37,18 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
       return { success: false, error: error.message };
     }
 
+    // Record the timeline event (best effort - table may not exist yet)
+    const { error: eventError } = await supabase
+      .from('order_status_events')
+      .insert({ order_id: orderId, status: newStatus });
+
+    if (eventError) {
+      console.warn('Could not record status event:', eventError.message);
+    }
+
     revalidatePath('/admin/orders');
     revalidatePath('/order-confirmation');
+    revalidatePath('/account');
     return { success: true };
   } catch (error) {
     console.error('Unexpected error in updateOrderStatus:', error);

@@ -4,20 +4,17 @@ import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import type { Order, OrderItem, OrderStatus } from '@/types/database';
 import { formatPaiseToRupees } from '@/lib/utils';
-import { formatEta, roundEtaForDisplay } from '@/lib/geo';
+import { OrderTimeline, type OrderStatusEvent } from '@/components/OrderTimeline';
 import Link from 'next/link';
 import {
   CheckCircle2,
-  Clock,
   ChefHat,
   Bike,
   PackageCheck,
-  XCircle,
   Phone,
   ArrowLeft,
   Receipt,
   MapPin,
-  Sparkles,
   QrCode,
   Copy,
   Check,
@@ -41,42 +38,12 @@ interface OrderLiveTrackerProps {
   upi?: UpiPaymentDetails;
   /** Advertised delivery radius in km. */
   deliveryRadiusKm?: number;
+  /** Status history for the timeline. */
+  initialEvents?: OrderStatusEvent[];
 }
 
 /** How often the tracking page refreshes the order status. */
 const STATUS_POLL_MS = 15_000;
-
-const STATUS_STEPS: Array<{
-  status: OrderStatus;
-  label: string;
-  desc: string;
-  icon: React.ComponentType<{ className?: string }>;
-}> = [
-  {
-    status: 'new',
-    label: 'Order Placed',
-    desc: 'Sent to Josh kitchen counter',
-    icon: CheckCircle2,
-  },
-  {
-    status: 'preparing',
-    label: 'Cooking in Kitchen',
-    desc: 'Freshly prepared with pure ghee',
-    icon: ChefHat,
-  },
-  {
-    status: 'ready',
-    label: 'Ready / Dispatched',
-    desc: 'Packed hot and ready for handoff',
-    icon: Bike,
-  },
-  {
-    status: 'completed',
-    label: 'Completed',
-    desc: 'Order handed over successfully',
-    icon: PackageCheck,
-  },
-];
 
 const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   new: 'Order received',
@@ -93,8 +60,10 @@ export function OrderLiveTracker({
   trackToken,
   upi,
   deliveryRadiusKm = 20,
+  initialEvents = [],
 }: OrderLiveTrackerProps) {
   const [order, setOrder] = useState<Order>(initialOrder);
+  const [events, setEvents] = useState<OrderStatusEvent[]>(initialEvents);
   const [upiIdCopied, setUpiIdCopied] = useState(false);
 
   const showUpiPayment =
@@ -140,9 +109,14 @@ export function OrderLiveTracker({
           status?: OrderStatus;
           paymentStatus?: Order['payment_status'];
           updatedAt?: string;
+          events?: OrderStatusEvent[];
         };
 
         if (cancelled || !data.status) return;
+
+        if (Array.isArray(data.events)) {
+          setEvents(data.events as OrderStatusEvent[]);
+        }
 
         setOrder((previous) => {
           if (
@@ -173,9 +147,6 @@ export function OrderLiveTracker({
       clearInterval(interval);
     };
   }, [trackToken, order.order_number, order.status]);
-
-  const currentStepIndex = STATUS_STEPS.findIndex((s) => s.status === order.status);
-  const isCancelled = order.status === 'cancelled';
 
   return (
     <div className="max-w-3xl mx-auto space-y-8 pb-16">
@@ -232,72 +203,13 @@ export function OrderLiveTracker({
           </span>
         </div>
 
-        {isCancelled ? (
-          <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-300 text-rose-800 dark:text-rose-200 flex items-center gap-3">
-            <XCircle className="w-6 h-6 text-rose-600 shrink-0" />
-            <div>
-              <p className="font-bold text-sm">Order Cancelled</p>
-              <p className="text-xs">
-                This order was cancelled by staff. Please contact the counter at {phone} for details.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {STATUS_STEPS.map((step, idx) => {
-              const Icon = step.icon;
-              const isPast = currentStepIndex >= idx;
-              const isCurrent = currentStepIndex === idx;
-
-              return (
-                <div
-                  key={step.status}
-                  className={`p-3.5 rounded-2xl border transition-all flex flex-col items-center text-center gap-2 ${
-                    isCurrent
-                      ? 'border-amber-500 bg-amber-50/70 dark:bg-amber-950/40 shadow-xs ring-2 ring-amber-500/20'
-                      : isPast
-                      ? 'border-emerald-300 bg-emerald-50/40 dark:bg-emerald-950/20 text-stone-700 dark:text-stone-300'
-                      : 'border-stone-200 dark:border-stone-800 bg-stone-50/40 dark:bg-stone-900/40 text-stone-400'
-                  }`}
-                >
-                  <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                      isCurrent
-                        ? 'bg-amber-600 text-white animate-bounce'
-                        : isPast
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-stone-200 dark:bg-stone-800 text-stone-400'
-                    }`}
-                  >
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className={`text-xs font-bold ${isCurrent ? 'text-amber-900 dark:text-amber-200' : ''}`}>
-                      {step.label}
-                    </h3>
-                    <p className="text-[10px] text-stone-400 mt-0.5 leading-tight">
-                      {step.desc}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        <div className="bg-stone-50 dark:bg-stone-800/50 p-3 rounded-xl flex items-center justify-between text-xs text-stone-600 dark:text-stone-300">
-          <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-amber-600" />
-            <span>Estimated Timing:</span>
-          </div>
-          <span className="font-bold text-stone-900 dark:text-stone-100">
-            {order.estimated_delivery_minutes
-              ? formatEta(roundEtaForDisplay(order.estimated_delivery_minutes))
-              : order.preferred_time === 'ASAP'
-              ? '25 – 40 minutes'
-              : order.preferred_time}
-          </span>
-        </div>
+        <OrderTimeline
+          status={order.status}
+          events={events}
+          orderType={order.order_type}
+          estimatedMinutes={order.estimated_delivery_minutes ?? null}
+          createdAt={order.created_at}
+        />
 
         {order.delivery_distance_km != null && (
           <div className="bg-stone-50 dark:bg-stone-800/50 p-3 rounded-xl flex items-center justify-between text-xs text-stone-600 dark:text-stone-300">

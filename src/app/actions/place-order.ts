@@ -335,7 +335,16 @@ export async function placeOrder(formData: CheckoutFormData): Promise<PlaceOrder
       // The order header is already created, so we log and proceed.
     }
 
-    // 8. Redeem the promotion atomically. The database enforces the total limit
+    // 8. Record the first timeline event (best effort - table may not exist yet)
+    const { error: firstEventError } = await adminSupabase
+      .from('order_status_events')
+      .insert({ order_id: newOrder.id, status: 'new' });
+
+    if (firstEventError) {
+      console.warn('Could not record status event:', firstEventError.message);
+    }
+
+    // 9. Redeem the promotion atomically. The database enforces the total limit
     //    and budget cap under a row lock; if it fails we roll the order back so
     //    nobody gets a discount without a recorded redemption.
     if (appliedPromotion) {

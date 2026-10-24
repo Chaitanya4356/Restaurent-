@@ -70,6 +70,13 @@ export default async function OrderConfirmationPage({ params }: PageProps) {
     .select('*')
     .eq('order_id', order.id);
 
+  // Fetch the status history for the timeline
+  const { data: eventRows } = await adminSupabase
+    .from('order_status_events')
+    .select('status, created_at, note')
+    .eq('order_id', order.id)
+    .order('created_at', { ascending: true });
+
   // Fetch restaurant + payment settings (select '*' so the page keeps working
   // before the UPI columns migration has been applied).
   const { data: settings } = await adminSupabase
@@ -85,6 +92,11 @@ export default async function OrderConfirmationPage({ params }: PageProps) {
       phone={settings?.phone_number || '+91 98765 43210'}
       trackToken={token}
       deliveryRadiusKm={settings?.delivery_radius_km ?? 20}
+      initialEvents={(eventRows ?? []) as Array<{
+        status: 'new' | 'preparing' | 'ready' | 'completed' | 'cancelled';
+        created_at: string;
+        note: string | null;
+      }>}
       upi={{
         id: settings?.upi_id ?? null,
         phone: settings?.upi_phone ?? null,
