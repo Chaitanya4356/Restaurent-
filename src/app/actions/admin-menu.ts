@@ -100,82 +100,82 @@ export async function deleteMenuItem(itemId: string) {
   }
 }
 
-/**
- * Settings that exist on every version of the schema. Used as a fallback when a
- * newer column is missing, so the owner can always save the rest.
- */
-const CORE_SETTINGS_FIELDS = [
-  'restaurant_name',
-  'phone_number',
-  'address',
-  'city',
-  'time_zone',
-  'opening_time',
-  'closing_time',
-  'order_cutoff_minutes',
-  'is_accepting_orders',
-  'delivery_fee_paise',
-  'free_delivery_threshold_paise',
-  'min_delivery_order_paise',
-  'brand_color_primary',
-  'brand_logo_url',
-] as const;
+/** Which migration adds a given settings column. */
+function migrationForColumn(column: string): string {
+  if (column.startsWith('upi_')) return 'supabase/migrations/001_upi_payment_settings.sql';
+  if (column === 'delivery_pincode') return 'supabase/migrations/002_delivery_pincodes.sql';
+  if (column === 'delivery_radius_km') return 'supabase/migrations/003_delivery_radius.sql';
+  if (column.startsWith('outlet_') || column === 'prep_time_minutes' || column === 'avg_speed_kmh') {
+    return 'supabase/migrations/004_delivery_eta.sql';
+  }
+  if (column === 'brand_favicon_url') return 'supabase/migrations/006_favicon.sql';
+  return 'supabase/migrations/RUN_ALL_PENDING.sql';
+}
+
+/** Pulls the offending column name out of a PostgREST/Postgres error. */
+function missingColumnFrom(message: string): string | null {
+  const candidates = [
+    /Could not find the '([a-zA-Z0-9_]+)' column/i,
+    /column "([a-zA-Z0-9_]+)" of relation/i,
+    /column ([a-zA-Z0-9_]+) does not exist/i,
+  ];
+
+  for (const pattern of candidates) {
+    const match = message.match(pattern);
+    if (match) return match[1];
+  }
+
+  return null;
+}
 
 /**
  * Updates restaurant settings (operating hours, accepting orders switch, delivery fee, etc.).
+ *
+ * If a newer column is missing (a migration has not been run yet), the missing
+ * column is dropped from the payload and the update is retried - so one absent
+ * column never blocks every other setting. The caller receives a `warning`
+ * naming the exact migration to run.
  */
-export async function updateRestaurantSettings(settings: Partial<RestaurantSettings>) {
+export async function updateRestaurantSettings(
+  settings: Partial<RestaurantSettings>
+): Promise<{ success: boolean; warning?: string; error?: string }> {
   try {
     const auth = await assertStaff();
     if (!auth.ok) return { success: false, error: auth.error };
 
     const supabase = createAdminClient();
-    const payload = {
+    const payload: Record<string, unknown> = {
       ...settings,
       updated_at: new Date().toISOString(),
     };
 
-    const { error } = await supabase
-      .from('restaurant_settings')
-      .update(payload)
-      .eq('id', 1);
+    const skipped: string[] = [];
+    const attempt: Record<string, unknown> = { ...payload };
+    let lastError: { message: string } | null = null;
 
-    if (error) {
-      // Graceful pre-migration fallback: newer columns (UPI, delivery radius,
-      // outlet location, ETA timings) are added by supabase/migrations/*.sql.
-      // Until those have been run, still save every core setting instead of
-      // failing the whole form.
-      const missingColumn = /schema cache|does not exist/i.test(error.message);
+    for (let i = 0; i < 8; i += 1) {
+      const { error } = await supabase
+        .from('restaurant_settings')
+        .update(attempt)
+        .eq('id', 1);
 
-      if (missingColumn) {
-        const corePayload: Record<string, unknown> = { updated_at: payload.updated_at };
-        for (const field of CORE_SETTINGS_FIELDS) {
-          if (field in payload) {
-            corePayload[field] = (payload as Record<string, unknown>)[field];
-          }
-        }
-
-        const { error: retryError } = await supabase
-          .from('restaurant_settings')
-          .update(corePayload)
-          .eq('id', 1);
-
-        if (!retryError) {
-          revalidatePath('/');
-          revalidatePath('/menu');
-          revalidatePath('/checkout');
-          revalidatePath('/contact');
-          revalidatePath('/admin/settings');
-          return {
-            success: false,
-            error:
-              'Your other settings were saved, but the newer fields (UPI, delivery radius, restaurant location, ETA timings) need a one-time database update. ' +
-              'Open Supabase → SQL Editor and run supabase/migrations/RUN_ALL_PENDING.sql, then save again.',
-          };
-        }
+      if (!error) {
+        lastError = null;
+        break;
       }
 
-      return { success: false, error: error.message };
+      lastError = error;
+      const column = missingColumnFrom(error.message);
+
+      // Only retry when the failure is a missing column we actually sent.
+      if (!column || !(column in attempt)) break;
+
+      delete attempt[column];
+      skipped.push(column);
+    }
+
+    if (lastError) {
+      return { success: false, error: lastError.message };
     }
 
     revalidatePath('/');
@@ -183,6 +183,17 @@ export async function updateRestaurantSettings(settings: Partial<RestaurantSetti
     revalidatePath('/checkout');
     revalidatePath('/contact');
     revalidatePath('/admin/settings');
+
+    if (skipped.length > 0) {
+      const migrations = [...new Set(skipped.map(migrationForColumn))];
+      return {
+        success: true,
+        warning:
+          `Saved. ${skipped.join(', ')} could not be stored because the database is missing ` +
+          `${skipped.length === 1 ? 'that column' : 'those columns'} - run ${migrations.join(' and ')} in the Supabase SQL editor, then save again.`,
+      };
+    }
+
     return { success: true };
   } catch (error) {
     return { success: false, error: 'Failed to update restaurant settings' };

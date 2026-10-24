@@ -96,6 +96,7 @@ export function AdminSettingsManager({
 
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [saveWarning, setSaveWarning] = useState<string | null>(null);
 
   const handleFaviconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -278,6 +279,7 @@ export function AdminSettingsManager({
 
     if (res.success) {
       setSavedSuccess(true);
+      setSaveWarning(res.warning ?? null);
       setTimeout(() => setSavedSuccess(false), 4000);
     } else {
       alert('Failed to update settings: ' + res.error);
@@ -303,6 +305,22 @@ export function AdminSettingsManager({
         <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs font-bold flex items-center gap-2">
           <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>Settings successfully updated across the website!</span>
+        </div>
+      )}
+
+      {saveWarning && (
+        <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs font-semibold flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p>{saveWarning}</p>
+            <button
+              type="button"
+              onClick={() => setSaveWarning(null)}
+              className="text-[10px] underline"
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
       )}
 
